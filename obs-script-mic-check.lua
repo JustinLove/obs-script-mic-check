@@ -79,7 +79,6 @@ function check_audio(props, p, set)
 	special_sources(function(source)
 		local status = audio_status(obs.obs_source_muted(source))
 		script_log(obs.obs_source_get_name(source) .. " " .. status)
-		obs.obs_source_release(source)
 	end)
 	--return true
 end
