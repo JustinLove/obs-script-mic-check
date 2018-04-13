@@ -11,6 +11,28 @@ local alarm_source = ""
 
 local alarm_active = false
 
+function set_alarm_visible(visible)
+	if alarm_source ~= nil then
+		local current_source = obs.obs_frontend_get_current_scene()
+		local current_scene = obs.obs_scene_from_source(current_source)
+		obs.obs_source_release(current_source)
+		local item = obs.obs_scene_find_source(current_scene, alarm_source)
+		if item ~= nil then
+			obs.obs_sceneitem_set_visible(item, visible)
+		end
+	end
+end
+
+function activate_alarm()
+	set_alarm_visible(true)
+	obs.remove_current_callback()
+end
+
+function play_alarm()
+	set_alarm_visible(false)
+	obs.timer_add(activate_alarm, 500)
+end
+
 function check_alarm()
 	if false then
 		if not alarm_active then
@@ -26,30 +48,25 @@ function check_alarm()
 	end
 end
 
-function activate_alarm()
-	set_alarm_visible(true)
-	obs.remove_current_callback()
-end
-
-function play_alarm()
-	set_alarm_visible(false)
-	obs.timer_add(activate_alarm, 500)
-end
-
-function set_alarm_visible(visible)
-	if alarm_source ~= nil then
-		local current_source = obs.obs_frontend_get_current_scene()
-		local current_scene = obs.obs_scene_from_source(current_source)
-		obs.obs_source_release(current_source)
-		local item = obs.obs_scene_find_source(current_scene, alarm_source)
-		if item ~= nil then
-			obs.obs_sceneitem_set_visible(item, visible)
-		end
-	end
-end
-
 function test_alarm(props, p, set)
 	play_alarm()
+	return true
+end
+
+function check_audio(props, p, set)
+	for i = 1,5 do
+		local source = obs.obs_get_output_source(i)
+		if source then
+			local status
+			if obs.obs_source_muted(source) then
+				status = "muted"
+			else
+				status = "live"
+			end
+			script_log(i .. " " .. obs.obs_source_get_name(source) .. " " .. status)
+			obs.obs_source_release(source)
+		end
+	end
 	return true
 end
 
@@ -103,6 +120,8 @@ function script_properties()
 
 	local ref = obs.obs_properties_add_button(props, "test_alarm", "Test Alarm", test_alarm)
 	obs.obs_property_set_long_description(ref, "Test activating selected media sources")
+
+	local ref = obs.obs_properties_add_button(props, "check_audio", "Check Audio", check_audio)
 
 	return props
 end
