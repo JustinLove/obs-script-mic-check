@@ -48,26 +48,64 @@ function check_alarm()
 	end
 end
 
+function special_sources(callback)
+	if not callback then
+		script_log("no callback")
+		return
+	end
+	for i = 1,5 do
+		local source = obs.obs_get_output_source(i)
+		if source then
+			callback(source)
+			obs.obs_source_release(source)
+		end
+	end
+end
+
 function test_alarm(props, p, set)
 	play_alarm()
 	return true
 end
 
+function audio_status(muted)
+	if muted then
+		return "muted"
+	else
+		return "live"
+	end
+end
+
 function check_audio(props, p, set)
-	for i = 1,5 do
-		local source = obs.obs_get_output_source(i)
-		if source then
-			local status
-			if obs.obs_source_muted(source) then
-				status = "muted"
-			else
-				status = "live"
-			end
-			script_log(i .. " " .. obs.obs_source_get_name(source) .. " " .. status)
-			obs.obs_source_release(source)
+	special_sources(function(source)
+		local status = audio_status(obs.obs_source_muted(source))
+		script_log(obs.obs_source_get_name(source) .. " " .. status)
+		obs.obs_source_release(source)
+	end)
+	--return true
+end
+
+function source_mute(calldata)
+	local source = obs.calldata_source(calldata, "source")
+	local status = audio_status(obs.obs_source_muted(source))
+	script_log(obs.obs_source_get_name(source) .. " " .. status)
+end
+
+function hook_source(source)
+	if source ~= nil then
+		local handler = obs.obs_source_get_signal_handler(source)
+		if handler ~= nil then
+			obs.signal_handler_connect(handler, "mute", source_mute)
 		end
 	end
-	return true
+end
+
+function unhook_source(source)
+	if source ~= nil then
+		local handler = obs.obs_source_get_signal_handler(source)
+		if handler ~= nil then
+			obs.signal_handler_disconnect(handler, "mute", source_mute)
+		end
+	end
 end
 
 function dump_obs()
@@ -145,12 +183,14 @@ end
 -- a function named script_load will be called on startup
 function script_load(settings)
 	script_log("load")
-	--dump_obs()
+	---dump_obs()
+	special_sources(hook_source)
 	--obs.timer_add(update_frames, sample_rate)
 end
 
 function script_unload()
 	set_alarm_visible(false)
 	-- these crash OBS
+	--special_sources(unhook_source)
 	--obs.timer_remove(update_frames)
 end
