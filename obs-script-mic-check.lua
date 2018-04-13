@@ -76,10 +76,12 @@ function audio_status(muted)
 end
 
 function check_audio(props, p, set)
-	special_sources(function(source)
+	local sources = obs.obs_enum_sources()
+	for _,source in ipairs(sources) do
 		local status = audio_status(obs.obs_source_muted(source))
 		script_log(obs.obs_source_get_name(source) .. " " .. status)
-	end)
+	end
+	obs.source_list_release(sources)
 	--return true
 end
 
