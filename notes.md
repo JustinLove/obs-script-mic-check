@@ -1,0 +1,1 @@
+- Check active rules when removing sources

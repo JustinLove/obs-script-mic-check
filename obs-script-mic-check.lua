@@ -47,6 +47,7 @@ function activate_alarm()
 end
 
 function play_alarm()
+	script_log("alarm")
 	set_alarm_visible(false)
 	obs.timer_add(activate_alarm, 500)
 end
@@ -66,8 +67,32 @@ function set_alarm(alarming)
 	end
 end
 
-function check_alarm()
+function run_default_rule()
 	-- just default now
+	for name,status in pairs(default_rule.audio_states) do
+		local cache = audio_sources[name]
+		if cache then
+			if cache.status == status then
+				if default_rule.operator == "any" then
+					return true
+				end
+			else
+				if default_rule.operator == "all" then
+					return false
+				end
+			end
+		end
+	end
+
+	if default_rule.operator == "any" then
+		return false
+	else
+		return true
+	end
+end
+
+function check_alarm()
+	set_alarm(run_default_rule())
 end
 
 function test_alarm(props, p, set)
@@ -120,7 +145,11 @@ function source_mute(calldata)
 	local status = audio_status(obs.obs_source_muted(source))
 	local active = video_status(obs.obs_source_active(source))
 	script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source))
-	check_alarm()
+	local cache = audio_sources[obs.obs_source_get_name(source)]
+	if cache then
+		cache.status = status
+		check_alarm()
+	end
 end
 
 function source_activate(calldata)
@@ -214,8 +243,8 @@ function script_properties()
 	for _,source in pairs(audio_sources) do
 		local s = obs.obs_properties_add_list(props, "default-" .. source.name, source.name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 		obs.obs_property_list_add_string(s, "N/A", "disabled")
-		obs.obs_property_list_add_string(s, "Mute", "mute")
-		obs.obs_property_list_add_string(s, "Live", "live")
+		obs.obs_property_list_add_string(s, "Mute", audio_status(true))
+		obs.obs_property_list_add_string(s, "Live", audio_status(false))
 	end
 
 	return props
