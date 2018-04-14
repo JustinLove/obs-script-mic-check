@@ -209,7 +209,6 @@ function script_properties()
 		obs.obs_property_list_add_string(s, "Mute", "mute")
 		obs.obs_property_list_add_string(s, "Live", "live")
 	end
-	obs.source_list_release(sources)
 
 	return props
 end
