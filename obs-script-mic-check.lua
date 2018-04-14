@@ -130,21 +130,6 @@ function hook_source(source)
 	end
 end
 
-function unhook_source(source)
-	if source ~= nil then
-		local handler = obs.obs_source_get_signal_handler(source)
-		if handler ~= nil then
-			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
-				obs.signal_handler_disconnect(handler, "mute", source_mute)
-			end
-			if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
-				obs.signal_handler_disconnect(handler, "activate", source_activate)
-				obs.signal_handler_disconnect(handler, "deactivate", source_deactivate)
-			end
-		end
-	end
-end
-
 function dump_obs()
 	local keys = {}
 	for key,value in pairs(obs) do
@@ -249,6 +234,5 @@ end
 function script_unload()
 	set_alarm_visible(false)
 	-- these crash OBS
-	--unhook_source
 	--obs.timer_remove(update_frames)
 end
