@@ -12,6 +12,12 @@ local alarm_source = ""
 local alarm_active = false
 local audio_sources = {}
 local video_sources = {}
+local default_rule = {
+	operator = "all",
+	audio_states = {
+		{["Mic/Aux"] = "mute"}
+	}
+}
 
 function enum_sources(callback)
 	local sources = obs.obs_enum_sources()
@@ -45,8 +51,8 @@ function play_alarm()
 	obs.timer_add(activate_alarm, 500)
 end
 
-function check_alarm()
-	if false then
+function set_alarm(alarming)
+	if alarming then
 		if not alarm_active then
 			play_alarm()
 			alarm_active = true
@@ -58,6 +64,10 @@ function check_alarm()
 			obs.timer_remove(play_alarm)
 		end
 	end
+end
+
+function check_alarm()
+	-- just default now
 end
 
 function test_alarm(props, p, set)
@@ -110,6 +120,7 @@ function source_mute(calldata)
 	local status = audio_status(obs.obs_source_muted(source))
 	local active = video_status(obs.obs_source_active(source))
 	script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	check_alarm()
 end
 
 function source_activate(calldata)
@@ -225,6 +236,15 @@ function script_update(settings)
 	my_settings = settings
 
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
+
+	default_rule.operator = obs.obs_data_get_string(settings, "default_operator")
+	default_rule.audio_states = {}
+	for _,source in pairs(audio_sources) do
+		local state = obs.obs_data_get_string(settings, "default-" .. source.name)
+		if state ~= "disabled" then
+			default_rule.audio_states[source.name] = state
+		end
+	end
 end
 
 -- a function named script_load will be called on startup
