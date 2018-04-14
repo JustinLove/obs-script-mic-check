@@ -13,6 +13,16 @@ local alarm_active = false
 local audio_sources = {}
 local video_sources = {}
 
+function enum_sources(callback)
+	local sources = obs.obs_enum_sources()
+	if sources ~= nil then
+		for _,source in ipairs(sources) do
+			callback(source)
+		end
+	end
+	obs.source_list_release(sources)
+end
+
 function set_alarm_visible(visible)
 	if alarm_source ~= nil then
 		local current_source = obs.obs_frontend_get_current_scene()
@@ -73,29 +83,25 @@ end
 
 function examine_source_states()
 	audio_sources = {}
-	local sources = obs.obs_enum_sources()
-	if sources ~= nil then
-		for _,source in ipairs(sources) do
-			local name = obs.obs_source_get_name(source)
-			local status = audio_status(obs.obs_source_muted(source))
-			local active = video_status(obs.obs_source_active(source))
-			local flags = obs.obs_source_get_output_flags(source)
-			script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
-			local info = {
-				name = name,
-				status = status,
-				active = active,
-				flags = flags,
-			}
-			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
-				audio_sources[name] = info
-			end
-			if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
-				video_sources[name] = info
-			end
+	enum_sources(function(source)
+		local name = obs.obs_source_get_name(source)
+		local status = audio_status(obs.obs_source_muted(source))
+		local active = video_status(obs.obs_source_active(source))
+		local flags = obs.obs_source_get_output_flags(source)
+		script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
+		local info = {
+			name = name,
+			status = status,
+			active = active,
+			flags = flags,
+		}
+		if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
+			audio_sources[name] = info
 		end
-	end
-	obs.source_list_release(sources)
+		if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
+			video_sources[name] = info
+		end
+	end)
 	--return true
 end
 
@@ -165,17 +171,13 @@ function script_properties()
 	local props = obs.obs_properties_create()
 
 	local p = obs.obs_properties_add_list(props, "alarm_source", "Alarm Media Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
-	local sources = obs.obs_enum_sources()
-	if sources ~= nil then
-		for _, source in ipairs(sources) do
-			local source_id = obs.obs_source_get_id(source)
-			if source_id == "ffmpeg_source" then
-				local name = obs.obs_source_get_name(source)
-				obs.obs_property_list_add_string(p, name, name)
-			end
+	enum_sources(function(source)
+		local source_id = obs.obs_source_get_id(source)
+		if source_id == "ffmpeg_source" then
+			local name = obs.obs_source_get_name(source)
+			obs.obs_property_list_add_string(p, name, name)
 		end
-	end
-	obs.source_list_release(sources)
+	end)
 	obs.obs_property_set_long_description(p, "See above for how to create an appropriate media source.")
 
 	local ref = obs.obs_properties_add_button(props, "test_alarm", "Test Alarm", test_alarm)
@@ -221,13 +223,7 @@ function script_load(settings)
 	obs.obs_data_set_string(settings, "label_default", "Alarm if in this state.")
 	---dump_obs()
 	examine_source_states()
-	local sources = obs.obs_enum_sources()
-	if sources ~= nil then
-		for _,source in ipairs(sources) do
-			hook_source(source)
-		end
-	end
-	obs.source_list_release(sources)
+	enum_sources(hook_source)
 	--obs.timer_add(update_frames, sample_rate)
 end
 
