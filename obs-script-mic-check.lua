@@ -83,12 +83,15 @@ function video_status(active)
 	end
 end
 
-function check_audio(props, p, set)
+function examine_source_states()
 	local sources = obs.obs_enum_sources()
-	for _,source in ipairs(sources) do
-		local status = audio_status(obs.obs_source_muted(source))
-		local active = video_status(obs.obs_source_active(source))
-		script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	if sources ~= nil then
+		for _,source in ipairs(sources) do
+			local status = audio_status(obs.obs_source_muted(source))
+			local active = video_status(obs.obs_source_active(source))
+			local flags = obs.obs_source_get_output_flags(source)
+			script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
+		end
 	end
 	obs.source_list_release(sources)
 	--return true
@@ -113,9 +116,14 @@ function hook_source(source)
 	if source ~= nil then
 		local handler = obs.obs_source_get_signal_handler(source)
 		if handler ~= nil then
-			obs.signal_handler_connect(handler, "mute", source_mute)
-			obs.signal_handler_connect(handler, "activate", source_activate)
-			obs.signal_handler_connect(handler, "deactivate", source_deactivate)
+			local flags = obs.obs_source_get_output_flags(source)
+			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
+				obs.signal_handler_connect(handler, "mute", source_mute)
+			end
+			if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
+				obs.signal_handler_connect(handler, "activate", source_activate)
+				obs.signal_handler_connect(handler, "deactivate", source_deactivate)
+			end
 		end
 	end
 end
@@ -124,9 +132,13 @@ function unhook_source(source)
 	if source ~= nil then
 		local handler = obs.obs_source_get_signal_handler(source)
 		if handler ~= nil then
-			obs.signal_handler_disconnect(handler, "mute", source_mute)
-			obs.signal_handler_disconnect(handler, "activate", source_activate)
-			obs.signal_handler_disconnect(handler, "deactivate", source_deactivate)
+			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
+				obs.signal_handler_disconnect(handler, "mute", source_mute)
+			end
+			if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
+				obs.signal_handler_disconnect(handler, "activate", source_activate)
+				obs.signal_handler_disconnect(handler, "deactivate", source_deactivate)
+			end
 		end
 	end
 end
@@ -169,7 +181,7 @@ function script_properties()
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		for _, source in ipairs(sources) do
-			source_id = obs.obs_source_get_id(source)
+			local source_id = obs.obs_source_get_id(source)
 			if source_id == "ffmpeg_source" then
 				local name = obs.obs_source_get_name(source)
 				obs.obs_property_list_add_string(p, name, name)
@@ -182,7 +194,27 @@ function script_properties()
 	local ref = obs.obs_properties_add_button(props, "test_alarm", "Test Alarm", test_alarm)
 	obs.obs_property_set_long_description(ref, "Test activating selected media sources")
 
-	local ref = obs.obs_properties_add_button(props, "check_audio", "Check Audio", check_audio)
+	local label = obs.obs_properties_add_text(props, "label_default", "Default Checks:", 0)
+	obs.obs_property_set_enabled(label, false)
+
+	local op = obs.obs_properties_add_list(props, "default_operator", "Operator", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	obs.obs_property_list_add_string(op, "Any", "any")
+	obs.obs_property_list_add_string(op, "All", "all")
+
+	local sources = obs.obs_enum_sources()
+	if sources ~= nil then
+		for _,source in ipairs(sources) do
+			local flags = obs.obs_source_get_output_flags(source)
+			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
+				local name = obs.obs_source_get_name(source)
+				local s = obs.obs_properties_add_list(props, "default-"..name, name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+				obs.obs_property_list_add_string(s, "N/A", "disabled")
+				obs.obs_property_list_add_string(s, "Mute", "mute")
+				obs.obs_property_list_add_string(s, "Live", "live")
+			end
+		end
+	end
+	obs.source_list_release(sources)
 
 	return props
 end
@@ -192,6 +224,7 @@ function script_defaults(settings)
 	script_log("defaults")
 
 	obs.obs_data_set_default_string(settings, "alarm_source", "")
+	obs.obs_data_set_default_string(settings, "label_default", "Alarm if in this state.")
 end
 
 --
@@ -206,10 +239,14 @@ end
 -- a function named script_load will be called on startup
 function script_load(settings)
 	script_log("load")
+	obs.obs_data_set_string(settings, "label_default", "Alarm if in this state.")
 	---dump_obs()
+	examine_source_states()
 	local sources = obs.obs_enum_sources()
-	for _,source in ipairs(sources) do
-		hook_source(source)
+	if sources ~= nil then
+		for _,source in ipairs(sources) do
+			hook_source(source)
+		end
 	end
 	obs.source_list_release(sources)
 	--obs.timer_add(update_frames, sample_rate)
