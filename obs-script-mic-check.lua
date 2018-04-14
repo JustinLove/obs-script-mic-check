@@ -97,7 +97,16 @@ end
 function source_mute(calldata)
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
-	script_log(obs.obs_source_get_name(source) .. " " .. status)
+	local active = video_status(obs.obs_source_active(source))
+	script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source))
+end
+
+function source_activate(calldata)
+	source_mute(calldata)
+end
+
+function source_deactivate(calldata)
+	source_mute(calldata)
 end
 
 function hook_source(source)
@@ -105,6 +114,8 @@ function hook_source(source)
 		local handler = obs.obs_source_get_signal_handler(source)
 		if handler ~= nil then
 			obs.signal_handler_connect(handler, "mute", source_mute)
+			obs.signal_handler_connect(handler, "activate", source_activate)
+			obs.signal_handler_connect(handler, "deactivate", source_deactivate)
 		end
 	end
 end
@@ -114,6 +125,8 @@ function unhook_source(source)
 		local handler = obs.obs_source_get_signal_handler(source)
 		if handler ~= nil then
 			obs.signal_handler_disconnect(handler, "mute", source_mute)
+			obs.signal_handler_disconnect(handler, "activate", source_activate)
+			obs.signal_handler_disconnect(handler, "deactivate", source_deactivate)
 		end
 	end
 end
@@ -194,7 +207,11 @@ end
 function script_load(settings)
 	script_log("load")
 	---dump_obs()
-	special_sources(hook_source)
+	local sources = obs.obs_enum_sources()
+	for _,source in ipairs(sources) do
+		hook_source(source)
+	end
+	obs.source_list_release(sources)
 	--obs.timer_add(update_frames, sample_rate)
 end
 
