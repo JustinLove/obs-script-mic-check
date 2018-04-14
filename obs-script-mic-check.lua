@@ -15,11 +15,11 @@ function set_alarm_visible(visible)
 	if alarm_source ~= nil then
 		local current_source = obs.obs_frontend_get_current_scene()
 		local current_scene = obs.obs_scene_from_source(current_source)
-		obs.obs_source_release(current_source)
 		local item = obs.obs_scene_find_source(current_scene, alarm_source)
 		if item ~= nil then
 			obs.obs_sceneitem_set_visible(item, visible)
 		end
+		obs.obs_source_release(current_source)
 	end
 end
 
@@ -75,11 +75,20 @@ function audio_status(muted)
 	end
 end
 
+function video_status(active)
+	if active then
+		return "active"
+	else
+		return "hidden"
+	end
+end
+
 function check_audio(props, p, set)
 	local sources = obs.obs_enum_sources()
 	for _,source in ipairs(sources) do
 		local status = audio_status(obs.obs_source_muted(source))
-		script_log(obs.obs_source_get_name(source) .. " " .. status .. " " .. obs.obs_source_get_id(source))
+		local active = video_status(obs.obs_source_active(source))
+		script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	end
 	obs.source_list_release(sources)
 	--return true
