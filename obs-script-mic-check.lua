@@ -10,6 +10,8 @@ local sample_rate = 1000
 local alarm_source = ""
 
 local alarm_active = false
+local audio_sources = {}
+local video_sources = {}
 
 function set_alarm_visible(visible)
 	if alarm_source ~= nil then
@@ -48,20 +50,6 @@ function check_alarm()
 	end
 end
 
-function special_sources(callback)
-	if not callback then
-		script_log("no callback")
-		return
-	end
-	for i = 1,5 do
-		local source = obs.obs_get_output_source(i)
-		if source then
-			callback(source)
-			obs.obs_source_release(source)
-		end
-	end
-end
-
 function test_alarm(props, p, set)
 	play_alarm()
 	return true
@@ -84,13 +72,27 @@ function video_status(active)
 end
 
 function examine_source_states()
+	audio_sources = {}
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		for _,source in ipairs(sources) do
+			local name = obs.obs_source_get_name(source)
 			local status = audio_status(obs.obs_source_muted(source))
 			local active = video_status(obs.obs_source_active(source))
 			local flags = obs.obs_source_get_output_flags(source)
-			script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
+			script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
+			local info = {
+				name = name,
+				status = status,
+				active = active,
+				flags = flags,
+			}
+			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
+				audio_sources[name] = info
+			end
+			if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
+				video_sources[name] = info
+			end
 		end
 	end
 	obs.source_list_release(sources)
@@ -201,18 +203,11 @@ function script_properties()
 	obs.obs_property_list_add_string(op, "Any", "any")
 	obs.obs_property_list_add_string(op, "All", "all")
 
-	local sources = obs.obs_enum_sources()
-	if sources ~= nil then
-		for _,source in ipairs(sources) do
-			local flags = obs.obs_source_get_output_flags(source)
-			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
-				local name = obs.obs_source_get_name(source)
-				local s = obs.obs_properties_add_list(props, "default-"..name, name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
-				obs.obs_property_list_add_string(s, "N/A", "disabled")
-				obs.obs_property_list_add_string(s, "Mute", "mute")
-				obs.obs_property_list_add_string(s, "Live", "live")
-			end
-		end
+	for _,source in pairs(audio_sources) do
+		local s = obs.obs_properties_add_list(props, "default-" .. source.name, source.name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+		obs.obs_property_list_add_string(s, "N/A", "disabled")
+		obs.obs_property_list_add_string(s, "Mute", "mute")
+		obs.obs_property_list_add_string(s, "Live", "live")
 	end
 	obs.source_list_release(sources)
 
@@ -255,6 +250,6 @@ end
 function script_unload()
 	set_alarm_visible(false)
 	-- these crash OBS
-	--special_sources(unhook_source)
+	--unhook_source
 	--obs.timer_remove(update_frames)
 end
