@@ -120,6 +120,16 @@ function source_deactivate(calldata)
 	source_mute(calldata)
 end
 
+function source_create(calldata)
+	local source = obs.calldata_source(calldata, "source")
+	hook_source(source)
+	examine_source_states()
+end
+
+function source_destroy(calldata)
+	examine_source_states()
+end
+
 function hook_source(source)
 	if source ~= nil then
 		local handler = obs.obs_source_get_signal_handler(source)
@@ -224,6 +234,10 @@ function script_load(settings)
 	---dump_obs()
 	examine_source_states()
 	enum_sources(hook_source)
+
+	local sh = obs.obs_get_signal_handler()
+	obs.signal_handler_connect(sh, "source_create", source_create)
+	obs.signal_handler_connect(sh, "source_destroy", source_destroy)
 	--obs.timer_add(update_frames, sample_rate)
 end
 
