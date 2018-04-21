@@ -342,15 +342,24 @@ end
 source_def.deactivate = function(filter)
 end
 
+source_def.get_width = function(filter)
+	local target = obs.obs_filter_get_target(filter.context)
+	return obs.obs_source_get_base_width(target)
+end
+
+source_def.get_height = function(filter)
+	local target = obs.obs_filter_get_target(filter.context)
+	return obs.obs_source_get_base_height(target)
+end
+
 source_def.video_render = function(filter, effect)
-	--[[
 	local target = obs.obs_filter_get_target(filter.context)
 	local cx = obs.obs_source_get_width(target)
 	local cy = obs.obs_source_get_height(target)
-	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
-	obs.obs_source_process_filter_begin(filter.context, obs.GS_RGBA, obs.OBS_NO_DIRECT_RENDERING)
-	obs.obs_source_process_filter_end(filter.context, effect_solid, cx, cy)
-	]]
+	local effect_default = obs.obs_get_base_effect(obs.OBS_EFFECT_DEFAULT)
+	if obs.obs_source_process_filter_begin(filter.context, obs.GS_RGBA, obs.OBS_NO_DIRECT_RENDERING) then
+		obs.obs_source_process_filter_end(filter.context, effect_default, cx, cy)
+	end
 end
 
 source_def.load = function(filter, settings)
