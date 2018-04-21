@@ -353,13 +353,7 @@ source_def.get_height = function(filter)
 end
 
 source_def.video_render = function(filter, effect)
-	local target = obs.obs_filter_get_target(filter.context)
-	local cx = obs.obs_source_get_width(target)
-	local cy = obs.obs_source_get_height(target)
-	local effect_default = obs.obs_get_base_effect(obs.OBS_EFFECT_DEFAULT)
-	if obs.obs_source_process_filter_begin(filter.context, obs.GS_RGBA, obs.OBS_NO_DIRECT_RENDERING) then
-		obs.obs_source_process_filter_end(filter.context, effect_default, cx, cy)
-	end
+	obs.obs_source_skip_video_filter(filter.context)
 end
 
 source_def.load = function(filter, settings)
