@@ -123,7 +123,7 @@ function examine_source_states()
 		local status = audio_status(obs.obs_source_muted(source))
 		local active = video_status(obs.obs_source_active(source))
 		local flags = obs.obs_source_get_output_flags(source)
-		script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
+		--script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
 		local info = {
 			name = name,
 			status = status,
@@ -295,3 +295,42 @@ function script_unload()
 	-- these crash OBS
 	--obs.timer_remove(update_frames)
 end
+
+source_def = {}
+source_def.id = "lua_mic_check_properties_filter"
+source_def.type = obs.OBS_SOURCE_TYPE_FILTER
+source_def.output_flags = bit.bor(obs.OBS_SOURCE_VIDEO)
+
+source_def.get_name = function()
+	return "Mic Check Settings"
+end
+
+source_def.create = function(source, settings)
+	return {}
+end
+
+source_def.destroy = function(data)
+end
+
+source_def.get_defaults = function(settings)
+end
+
+--source_def.get_properties = function(data)
+--end
+
+source_def.update = function(data, settings)
+end
+
+source_def.activate = function(data)
+end
+
+source_def.deactivate = function(data)
+end
+
+source_def.video_render = function(data, effect)
+end
+
+source_def.load = function(data, settings)
+end
+
+obs.obs_register_source(source_def)
