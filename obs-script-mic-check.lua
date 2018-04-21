@@ -213,6 +213,19 @@ function script_description()
 	return description
 end
 
+function add_audio_rule_properties(props)
+	local op = obs.obs_properties_add_list(props, "operator", "Operator", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	obs.obs_property_list_add_string(op, "Any", "any")
+	obs.obs_property_list_add_string(op, "All", "all")
+
+	for _,source in pairs(audio_sources) do
+		local s = obs.obs_properties_add_list(props, source.name, source.name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+		obs.obs_property_list_add_string(s, "N/A", "disabled")
+		obs.obs_property_list_add_string(s, "Mute", audio_status(true))
+		obs.obs_property_list_add_string(s, "Live", audio_status(false))
+	end
+end
+
 -- A function named script_properties defines the properties that the user
 -- can change for the entire script module itself
 function script_properties()
@@ -236,16 +249,7 @@ function script_properties()
 	local label = obs.obs_properties_add_text(props, "label_default", "Default Checks:", 0)
 	obs.obs_property_set_enabled(label, false)
 
-	local op = obs.obs_properties_add_list(props, "default_operator", "Operator", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
-	obs.obs_property_list_add_string(op, "Any", "any")
-	obs.obs_property_list_add_string(op, "All", "all")
-
-	for _,source in pairs(audio_sources) do
-		local s = obs.obs_properties_add_list(props, "default-" .. source.name, source.name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
-		obs.obs_property_list_add_string(s, "N/A", "disabled")
-		obs.obs_property_list_add_string(s, "Mute", audio_status(true))
-		obs.obs_property_list_add_string(s, "Live", audio_status(false))
-	end
+	add_audio_rule_properties(props)
 
 	return props
 end
@@ -266,10 +270,10 @@ function script_update(settings)
 
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 
-	default_rule.operator = obs.obs_data_get_string(settings, "default_operator")
+	default_rule.operator = obs.obs_data_get_string(settings, "operator")
 	default_rule.audio_states = {}
 	for _,source in pairs(audio_sources) do
-		local state = obs.obs_data_get_string(settings, "default-" .. source.name)
+		local state = obs.obs_data_get_string(settings, source.name)
 		if state ~= "disabled" then
 			default_rule.audio_states[source.name] = state
 		end
@@ -299,38 +303,57 @@ end
 source_def = {}
 source_def.id = "lua_mic_check_properties_filter"
 source_def.type = obs.OBS_SOURCE_TYPE_FILTER
-source_def.output_flags = bit.bor(obs.OBS_SOURCE_VIDEO)
+source_def.output_flags = obs.OBS_SOURCE_VIDEO
 
 source_def.get_name = function()
 	return "Mic Check Settings"
 end
 
-source_def.create = function(source, settings)
-	return {}
+source_def.create = function(settings, source)
+	return {
+		context = source,
+	}
 end
 
-source_def.destroy = function(data)
+source_def.destroy = function(filter)
 end
 
 source_def.get_defaults = function(settings)
+	obs.obs_data_set_default_string(settings, "label_filter", "Alarm if in this state.")
 end
 
---source_def.get_properties = function(data)
---end
+source_def.get_properties = function(filter)
+	local props = obs.obs_properties_create()
 
-source_def.update = function(data, settings)
+	local label = obs.obs_properties_add_text(props, "label_filter", "Source Checks:", 0)
+	obs.obs_property_set_enabled(label, false)
+
+	add_audio_rule_properties(props)
+
+	return props
 end
 
-source_def.activate = function(data)
+source_def.update = function(filter, settings)
 end
 
-source_def.deactivate = function(data)
+source_def.activate = function(filter)
 end
 
-source_def.video_render = function(data, effect)
+source_def.deactivate = function(filter)
 end
 
-source_def.load = function(data, settings)
+source_def.video_render = function(filter, effect)
+	--[[
+	local target = obs.obs_filter_get_target(filter.context)
+	local cx = obs.obs_source_get_width(target)
+	local cy = obs.obs_source_get_height(target)
+	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
+	obs.obs_source_process_filter_begin(filter.context, obs.GS_RGBA, obs.OBS_NO_DIRECT_RENDERING)
+	obs.obs_source_process_filter_end(filter.context, effect_solid, cx, cy)
+	]]
+end
+
+source_def.load = function(filter, settings)
 end
 
 obs.obs_register_source(source_def)
