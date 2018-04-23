@@ -144,7 +144,7 @@ function source_mute(calldata)
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
 	local active = video_status(obs.obs_source_active(source))
-	script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	--script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	local cache = audio_sources[obs.obs_source_get_name(source)]
 	if cache then
 		cache.status = status
@@ -310,19 +310,24 @@ source_def.get_name = function()
 end
 
 source_def.create = function(settings, source)
-	return {
+	script_log("filter create")
+	local filter = {
 		context = source,
 	}
+	source_def.load(filter, settings)
+	return filter
 end
 
 source_def.destroy = function(filter)
 end
 
 source_def.get_defaults = function(settings)
+	script_log("filter defaults")
 	obs.obs_data_set_default_string(settings, "label_filter", "Alarm if in this state.")
 end
 
 source_def.get_properties = function(filter)
+	script_log("filter properties")
 	local props = obs.obs_properties_create()
 
 	local label = obs.obs_properties_add_text(props, "label_filter", "Source Checks:", 0)
@@ -334,6 +339,7 @@ source_def.get_properties = function(filter)
 end
 
 source_def.update = function(filter, settings)
+	script_log("filter update")
 end
 
 source_def.activate = function(filter)
@@ -357,6 +363,7 @@ source_def.video_render = function(filter, effect)
 end
 
 source_def.load = function(filter, settings)
+	script_log("filter load")
 end
 
 obs.obs_register_source(source_def)
