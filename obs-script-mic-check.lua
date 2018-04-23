@@ -76,21 +76,52 @@ function dump_rule(rule)
 	script_log(rule.operator .. "(" .. table.concat(items, ",") .. ")")
 end
 
-function capture_rule_settings(rule, settings)
+function bootstrap_rule_settings(rule, settings)
 	if rule == nil then
-		script_log("capture_rule_settings no rule")
+		script_log("bootstrap_rule_settings no rule")
 	end
 	if settings == nil then
-		script_log("capture_rule_settings no settings")
+		script_log("bootstrap_rule_settings no settings")
+	end
+	rule.operator = obs.obs_data_get_string(settings, "operator")
+
+	rule.audio_states = {}
+	local index = 1
+	while index < 200 do
+		local name = obs.obs_data_get_string(settings, "audio" .. index)
+		if name == nil or name == "" then
+			break
+		end
+		index = index + 1
+
+		local state = obs.obs_data_get_string(settings, name)
+		if state == audio_status(true) or state == audio_status(false) then
+			rule.audio_states[name] = state
+		end
+	end
+
+	dump_rule(rule)
+end
+
+function update_rule_settings(rule, settings)
+	if rule == nil then
+		script_log("update_rule_settings no rule")
+	end
+	if settings == nil then
+		script_log("update_rule_settings no settings")
 	end
 	rule.operator = obs.obs_data_get_string(settings, "operator")
 	rule.audio_states = {}
+	local index = 1
 	for _,source in pairs(audio_sources) do
 		local state = obs.obs_data_get_string(settings, source.name)
-		if state ~= "disabled" then
+		if state == audio_status(true) or state == audio_status(false) then
 			rule.audio_states[source.name] = state
+			obs.obs_data_set_string(settings, "audio" .. index, source.name)
+			index = index + 1
 		end
 	end
+	obs.obs_data_erase(settings, "audio" .. index)
 	dump_rule(rule)
 end
 
@@ -306,13 +337,16 @@ function script_update(settings)
 
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 
-	capture_rule_settings(default_rule, settings)
+	update_rule_settings(default_rule, settings)
 end
 
 -- a function named script_load will be called on startup
 function script_load(settings)
 	script_log("load")
 	---dump_obs()
+
+	bootstrap_rule_settings(default_rule, settings)
+
 	examine_source_states()
 	enum_sources(hook_source)
 
@@ -346,7 +380,12 @@ source_def.create = function(settings, source)
 		context = source,
 	}
 	next_filter_id = next_filter_id + 1
-	source_def.load(filter, settings)
+
+	if source_rules[filter.id] == nil then
+		source_rules[filter.id] = {}
+	end
+	bootstrap_rule_settings(source_rules[filter.id], settings)
+
 	return filter
 end
 
@@ -357,7 +396,6 @@ source_def.get_defaults = function(settings)
 	script_log("filter defaults")
 	obs.obs_data_set_default_string(settings, "label_filter", "Alarm if in this state.")
 	audio_default_settings(settings)
-	capture_rule_settings({}, settings)
 end
 
 source_def.get_properties = function(filter)
@@ -377,7 +415,7 @@ source_def.update = function(filter, settings)
 	if source_rules[filter.id] == nil then
 		source_rules[filter.id] = {}
 	end
-	capture_rule_settings(source_rules[filter.id], settings)
+	update_rule_settings(source_rules[filter.id], settings)
 end
 
 source_def.activate = function(filter)
@@ -402,7 +440,6 @@ end
 
 source_def.load = function(filter, settings)
 	script_log("filter load")
-	source_def.update(filter, settings)
 end
 
 obs.obs_register_source(source_def)
