@@ -67,6 +67,26 @@ function set_alarm(alarming)
 	end
 end
 
+function dump_rule(rule)
+	local items = {}
+	for source,state in pairs(rule.audio_states) do
+		table.insert(items, source .. "=" .. state)
+	end
+	script_log(rule.operator .. "(" .. table.concat(items, ",") .. ")")
+end
+
+function capture_rule_settings(rule, settings)
+	rule.operator = obs.obs_data_get_string(settings, "operator")
+	rule.audio_states = {}
+	for _,source in pairs(audio_sources) do
+		local state = obs.obs_data_get_string(settings, source.name)
+		if state ~= "disabled" then
+			rule.audio_states[source.name] = state
+		end
+	end
+	dump_rule(rule)
+end
+
 function run_default_rule()
 	-- just default now
 	for name,status in pairs(default_rule.audio_states) do
@@ -270,14 +290,7 @@ function script_update(settings)
 
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 
-	default_rule.operator = obs.obs_data_get_string(settings, "operator")
-	default_rule.audio_states = {}
-	for _,source in pairs(audio_sources) do
-		local state = obs.obs_data_get_string(settings, source.name)
-		if state ~= "disabled" then
-			default_rule.audio_states[source.name] = state
-		end
-	end
+	capture_rule_settings(default_rule, settings)
 end
 
 -- a function named script_load will be called on startup
