@@ -396,6 +396,7 @@ source_def.create = function(settings, source)
 end
 
 source_def.destroy = function(filter)
+	source_rules[filter.id] = nil
 end
 
 source_def.get_defaults = function(settings)
@@ -422,12 +423,6 @@ source_def.update = function(filter, settings)
 		source_rules[filter.id] = {}
 	end
 	update_rule_settings(source_rules[filter.id], settings)
-end
-
-source_def.activate = function(filter)
-end
-
-source_def.deactivate = function(filter)
 end
 
 source_def.get_width = function(filter)
