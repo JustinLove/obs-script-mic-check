@@ -97,6 +97,14 @@ function bootstrap_rule_settings(rule, settings)
 		local state = obs.obs_data_get_string(settings, name)
 		if state == audio_status(true) or state == audio_status(false) then
 			rule.audio_states[name] = state
+			if audio_sources[name] == nil then
+				audio_sources[name] = {
+					name = name,
+					status = audio_status(false),
+					active = video_status(false),
+					flags = 0,
+				}
+			end
 		end
 	end
 
@@ -182,7 +190,6 @@ function video_status(active)
 end
 
 function examine_source_states()
-	audio_sources = {}
 	enum_sources(function(source)
 		local name = obs.obs_source_get_name(source)
 		local status = audio_status(obs.obs_source_muted(source))
