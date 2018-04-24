@@ -1,5 +1,6 @@
 obs = obslua
 bit = require("bit")
+os = require("os")
 
 function script_log(message)
 	obs.script_log(obs.LOG_INFO, message)
@@ -10,6 +11,8 @@ local sample_rate = 1000
 local alarm_source = ""
 
 local alarm_active = false
+local trigger_active = false
+local trigger_time = os.time()
 local audio_sources = {}
 local video_sources = {}
 local default_rule = {
@@ -53,6 +56,24 @@ function play_alarm()
 	obs.timer_add(activate_alarm, 500)
 end
 
+function trigger_alarm(violation)
+	if violation then
+		if trigger_active then
+			if os.difftime(os.time(), trigger_time) > 5 then
+				set_alarm(true)
+			end
+		else
+			script_log("trigger")
+			trigger_active = true
+			trigger_time = os.time()
+		end
+	else
+		--script_log("no violation")
+		trigger_active = false
+		set_alarm(false)
+	end
+end
+
 function set_alarm(alarming)
 	if alarming then
 		if not alarm_active then
@@ -63,7 +84,9 @@ function set_alarm(alarming)
 	else
 		if alarm_active then
 			alarm_active = false
+			set_alarm_visible(false)
 			obs.timer_remove(play_alarm)
+			obs.timer_remove(trigger_alarm)
 		end
 	end
 end
@@ -169,12 +192,12 @@ function check_alarm()
 		if rule.name then
 			local source = video_sources[rule.name]
 			if source and source.active == 'active' then
-				set_alarm(run_rule(rule))
+				trigger_alarm(run_rule(rule))
 				return
 			end
 		end
 	end
-	set_alarm(run_rule(default_rule))
+	trigger_alarm(run_rule(default_rule))
 end
 
 function test_alarm(props, p, set)
@@ -380,7 +403,7 @@ function script_load(settings)
 	local sh = obs.obs_get_signal_handler()
 	obs.signal_handler_connect(sh, "source_create", source_create)
 	obs.signal_handler_connect(sh, "source_destroy", source_destroy)
-	--obs.timer_add(update_frames, sample_rate)
+	obs.timer_add(check_alarm, sample_rate)
 end
 
 function script_unload()
