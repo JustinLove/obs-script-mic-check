@@ -211,11 +211,21 @@ function examine_source_states()
 	--return true
 end
 
+function source_active(calldata, source_active)
+	local source = obs.calldata_source(calldata, "source")
+	local active = video_status(source_active)
+	--script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. obs.obs_source_get_id(source))
+	local cache = video_sources[obs.obs_source_get_name(source)]
+	if cache then
+		cache.active = active
+		check_alarm()
+	end
+end
+
 function source_mute(calldata)
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
-	local active = video_status(obs.obs_source_active(source))
-	--script_log(obs.obs_source_get_name(source) .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	--script_log(obs.obs_source_get_name(source) .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	local cache = audio_sources[obs.obs_source_get_name(source)]
 	if cache then
 		cache.status = status
@@ -224,11 +234,11 @@ function source_mute(calldata)
 end
 
 function source_activate(calldata)
-	source_mute(calldata)
+	source_active(calldata, true)
 end
 
 function source_deactivate(calldata)
-	source_mute(calldata)
+	source_active(calldata, false)
 end
 
 function source_create(calldata)
@@ -384,6 +394,8 @@ source_def.create = function(settings, source)
 	local filter = {
 		id = next_filter_id,
 		context = source,
+		width = 100,
+		height = 100,
 	}
 	next_filter_id = next_filter_id + 1
 
@@ -426,21 +438,28 @@ source_def.update = function(filter, settings)
 end
 
 source_def.get_width = function(filter)
-	local target = obs.obs_filter_get_target(filter.context)
-	return obs.obs_source_get_base_width(target)
+	return filter.width
 end
 
 source_def.get_height = function(filter)
-	local target = obs.obs_filter_get_target(filter.context)
-	return obs.obs_source_get_base_height(target)
+	return filter.height
 end
 
 source_def.video_render = function(filter, effect)
 	obs.obs_source_skip_video_filter(filter.context)
 end
 
-source_def.load = function(filter, settings)
-	script_log("filter load")
+source_def.video_tick = function(filter, seconds)
+	local target = obs.obs_filter_get_target(filter.context)
+	if target ~= nil then
+		filter.width = obs.obs_source_get_base_width(target)
+		filter.height = obs.obs_source_get_base_height(target)
+	end
+	local parent = obs.obs_filter_get_parent(filter.context)
+	if parent ~= nil then
+		local name = obs.obs_source_get_name(parent)
+		source_rules[filter.id].name = name
+	end
 end
 
 obs.obs_register_source(source_def)
