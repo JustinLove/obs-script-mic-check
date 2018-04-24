@@ -140,24 +140,23 @@ function audio_default_settings(settings)
 	end
 end
 
-function run_default_rule()
-	-- just default now
-	for name,status in pairs(default_rule.audio_states) do
+function run_rule(rule)
+	for name,status in pairs(rule.audio_states) do
 		local cache = audio_sources[name]
 		if cache then
 			if cache.status == status then
-				if default_rule.operator == "any" then
+				if rule.operator == "any" then
 					return true
 				end
 			else
-				if default_rule.operator == "all" then
+				if rule.operator == "all" then
 					return false
 				end
 			end
 		end
 	end
 
-	if default_rule.operator == "any" then
+	if rule.operator == "any" then
 		return false
 	else
 		return true
@@ -165,7 +164,7 @@ function run_default_rule()
 end
 
 function check_alarm()
-	set_alarm(run_default_rule())
+	set_alarm(run_rule(default_rule))
 end
 
 function test_alarm(props, p, set)
