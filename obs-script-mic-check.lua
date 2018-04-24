@@ -16,6 +16,7 @@ local trigger_time = os.time()
 local audio_sources = {}
 local video_sources = {}
 local default_rule = {
+	timeout = 5,
 	operator = "all",
 	audio_states = {
 		{["Mic/Aux"] = "mute"}
@@ -56,10 +57,10 @@ function play_alarm()
 	obs.timer_add(activate_alarm, 500)
 end
 
-function trigger_alarm(violation)
+function trigger_alarm(violation, timeout)
 	if violation then
 		if trigger_active then
-			if os.difftime(os.time(), trigger_time) > 5 then
+			if os.difftime(os.time(), trigger_time) > timeout then
 				set_alarm(true)
 			end
 		else
@@ -86,7 +87,6 @@ function set_alarm(alarming)
 			alarm_active = false
 			set_alarm_visible(false)
 			obs.timer_remove(play_alarm)
-			obs.timer_remove(trigger_alarm)
 		end
 	end
 end
@@ -106,6 +106,7 @@ function bootstrap_rule_settings(rule, settings)
 	if settings == nil then
 		script_log("bootstrap_rule_settings no settings")
 	end
+	rule.timeout = obs.obs_data_get_int(settings, "timeout")
 	rule.operator = obs.obs_data_get_string(settings, "operator")
 
 	rule.audio_states = {}
@@ -141,6 +142,7 @@ function update_rule_settings(rule, settings)
 	if settings == nil then
 		script_log("update_rule_settings no settings")
 	end
+	rule.timeout = obs.obs_data_get_int(settings, "timeout")
 	rule.operator = obs.obs_data_get_string(settings, "operator")
 	rule.audio_states = {}
 	local index = 1
@@ -158,6 +160,7 @@ function update_rule_settings(rule, settings)
 end
 
 function audio_default_settings(settings)
+	obs.obs_data_set_default_int(settings, "timeout", 5)
 	obs.obs_data_set_default_string(settings, "operator", "any")
 	for _,source in pairs(audio_sources) do
 		obs.obs_data_set_default_string(settings, source.name, "disabled")
@@ -170,20 +173,20 @@ function run_rule(rule)
 		if cache then
 			if cache.status == status then
 				if rule.operator == "any" then
-					return true
+					return true, rule.timeout
 				end
 			else
 				if rule.operator == "all" then
-					return false
+					return false, rule.timeout
 				end
 			end
 		end
 	end
 
 	if rule.operator == "any" then
-		return false
+		return false, rule.timeout
 	else
-		return true
+		return true, rule.timeout
 	end
 end
 
@@ -329,6 +332,9 @@ function script_description()
 end
 
 function add_audio_rule_properties(props)
+	local to = obs.obs_properties_add_int(props, "timeout", "For this many seconds", 0, 60 * 60, 5) 
+	obs.obs_property_set_long_description(ss, "Alarm if audio is in alarm state for this many seconds.")
+
 	local op = obs.obs_properties_add_list(props, "operator", "Operator", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	obs.obs_property_list_add_string(op, "Any", "any")
 	obs.obs_property_list_add_string(op, "All", "all")
