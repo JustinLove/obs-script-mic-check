@@ -325,7 +325,15 @@ end
 
 -- A function named script_description returns the description shown to
 -- the user
-local description = [[Play an alarm if mic state not appropriate foru souces shown
+local description = [[Play an alarm if mic state not appropriate for sources shown.
+
+Add a media source for the alarm. A suitable sound file is provided with the script. Open Advanced Audio Properties for the source and change Audio Monitoring to Monitor Only (mute output).
+
+Add a copy of the alarm source to every scene where you want to hear it.
+
+Attach rules to video sources ("BRB", "Starting Soon", etc) using the "Mic Check Settings" filter. (Right-click on a source and select filters.) The first active video source with attached settings will be used to trigger alarms instead of the defaults.
+
+If no such video source is active, then the default rules below will be used.
 ]]
 function script_description()
 	return description
@@ -333,17 +341,19 @@ end
 
 function add_audio_rule_properties(props)
 	local to = obs.obs_properties_add_int(props, "timeout", "For this many seconds", 0, 60 * 60, 5) 
-	obs.obs_property_set_long_description(ss, "Alarm if audio is in alarm state for this many seconds.")
+	obs.obs_property_set_long_description(to, "Alarm if audio is in alarm state for this many seconds.")
 
 	local op = obs.obs_properties_add_list(props, "operator", "Operator", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	obs.obs_property_list_add_string(op, "Any", "any")
 	obs.obs_property_list_add_string(op, "All", "all")
+	obs.obs_property_set_long_description(op, "If multiple audio sources are selected below, how should they be combined.")
 
 	for _,source in pairs(audio_sources) do
 		local s = obs.obs_properties_add_list(props, source.name, source.name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 		obs.obs_property_list_add_string(s, "N/A", "disabled")
 		obs.obs_property_list_add_string(s, "Mute", audio_status(true))
 		obs.obs_property_list_add_string(s, "Live", audio_status(false))
+		obs.obs_property_set_long_description(s, "Alarm will trigger if this audio source is in the specified state.")
 	end
 end
 
