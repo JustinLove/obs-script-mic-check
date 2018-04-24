@@ -1,2 +1,2 @@
-- Audio sources not available when reloading settings, automatic script_update event nukes list of sources saved in settings
-- Check active rules when removing sources
+- visual feedback?
+- check actual volume levels to try and detect speaking into mute
