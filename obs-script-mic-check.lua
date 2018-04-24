@@ -131,6 +131,7 @@ function update_rule_settings(rule, settings)
 	end
 	obs.obs_data_erase(settings, "audio" .. index)
 	dump_rule(rule)
+	check_alarm()
 end
 
 function audio_default_settings(settings)
@@ -164,6 +165,15 @@ function run_rule(rule)
 end
 
 function check_alarm()
+	for _,rule in pairs(source_rules) do
+		if rule.name then
+			local source = video_sources[rule.name]
+			if source and source.active == 'active' then
+				set_alarm(run_rule(rule))
+				return
+			end
+		end
+	end
 	set_alarm(run_rule(default_rule))
 end
 
@@ -208,6 +218,7 @@ function examine_source_states()
 			video_sources[name] = info
 		end
 	end)
+	check_alarm()
 	--return true
 end
 
