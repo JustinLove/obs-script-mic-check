@@ -11,6 +11,7 @@ local sample_rate = 1000
 local status_margin = 10
 local status_width = 500
 local status_height = 500
+local status_font_size = 40
 
 local alarm_source = ""
 
@@ -518,13 +519,13 @@ end
 
 obs.obs_register_source(filter_def)
 
-local create_label = function(name, h)
+local create_label = function(name, size)
 	local settings = obs.obs_data_create()
 	local font = obs.obs_data_create()
 
 	obs.obs_data_set_string(font, "face", "Monospace")
-	obs.obs_data_set_int(font, "flags", 1) -- Bold
-	obs.obs_data_set_int(font, "size", math.floor(h/9.81))
+	--obs.obs_data_set_int(font, "flags", 1) -- Bold
+	obs.obs_data_set_int(font, "size", size)
 
 	obs.obs_data_set_obj(settings, "font", font)
 	obs.obs_data_set_string(settings, "text", " " .. name .. " ")
@@ -611,7 +612,7 @@ source_def.video_render = function(data, effect)
 		if rule.name then
 			if data.labels[rule.name] == nil then
 				script_log("create " .. rule.name)
-				data.labels[rule.name] = create_label(rule.name, status_height)
+				data.labels[rule.name] = create_label(rule.name, status_font_size)
 			end
 			if data.labels[rule.name] ~= nil then
 				--script_log("draw " .. rule.name)
