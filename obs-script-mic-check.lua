@@ -430,16 +430,16 @@ end
 
 local next_filter_id = 0
 
-source_def = {}
-source_def.id = "lua_mic_check_properties_filter"
-source_def.type = obs.OBS_SOURCE_TYPE_FILTER
-source_def.output_flags = obs.OBS_SOURCE_VIDEO
+filter_def = {}
+filter_def.id = "lua_mic_check_properties_filter"
+filter_def.type = obs.OBS_SOURCE_TYPE_FILTER
+filter_def.output_flags = obs.OBS_SOURCE_VIDEO
 
-source_def.get_name = function()
+filter_def.get_name = function()
 	return "Mic Check Settings"
 end
 
-source_def.create = function(settings, source)
+filter_def.create = function(settings, source)
 	script_log("filter create")
 	local filter = {
 		id = next_filter_id,
@@ -457,17 +457,17 @@ source_def.create = function(settings, source)
 	return filter
 end
 
-source_def.destroy = function(filter)
+filter_def.destroy = function(filter)
 	source_rules[filter.id] = nil
 end
 
-source_def.get_defaults = function(settings)
+filter_def.get_defaults = function(settings)
 	script_log("filter defaults")
 	obs.obs_data_set_default_string(settings, "label_filter", "Alarm if in this state.")
 	audio_default_settings(settings)
 end
 
-source_def.get_properties = function(filter)
+filter_def.get_properties = function(filter)
 	script_log("filter properties")
 	local props = obs.obs_properties_create()
 
@@ -479,7 +479,7 @@ source_def.get_properties = function(filter)
 	return props
 end
 
-source_def.update = function(filter, settings)
+filter_def.update = function(filter, settings)
 	script_log("filter update")
 	if source_rules[filter.id] == nil then
 		source_rules[filter.id] = {}
@@ -487,19 +487,19 @@ source_def.update = function(filter, settings)
 	update_rule_settings(source_rules[filter.id], settings)
 end
 
-source_def.get_width = function(filter)
+filter_def.get_width = function(filter)
 	return filter.width
 end
 
-source_def.get_height = function(filter)
+filter_def.get_height = function(filter)
 	return filter.height
 end
 
-source_def.video_render = function(filter, effect)
+filter_def.video_render = function(filter, effect)
 	obs.obs_source_skip_video_filter(filter.context)
 end
 
-source_def.video_tick = function(filter, seconds)
+filter_def.video_tick = function(filter, seconds)
 	local target = obs.obs_filter_get_target(filter.context)
 	if target ~= nil then
 		filter.width = obs.obs_source_get_base_width(target)
@@ -512,4 +512,4 @@ source_def.video_tick = function(filter, seconds)
 	end
 end
 
-obs.obs_register_source(source_def)
+obs.obs_register_source(filter_def)
