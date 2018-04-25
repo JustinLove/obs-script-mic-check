@@ -1,2 +1,3 @@
 - visual feedback?
+- manually specify text type?
 - check actual volume levels to try and detect speaking into mute

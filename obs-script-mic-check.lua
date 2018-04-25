@@ -8,6 +8,10 @@ end
 
 local sample_rate = 1000
 
+local status_margin = 10
+local status_width = 500
+local status_height = 500
+
 local alarm_source = ""
 
 local alarm_active = false
@@ -409,7 +413,7 @@ end
 -- a function named script_load will be called on startup
 function script_load(settings)
 	script_log("load")
-	---dump_obs()
+	--dump_obs()
 
 	bootstrap_rule_settings(default_rule, settings)
 
@@ -513,3 +517,106 @@ filter_def.video_tick = function(filter, seconds)
 end
 
 obs.obs_register_source(filter_def)
+
+local create_label = function(name, h)
+	local settings = obs.obs_data_create()
+	local font = obs.obs_data_create()
+
+	obs.obs_data_set_string(font, "face", "Monospace")
+	obs.obs_data_set_int(font, "flags", 1) -- Bold
+	obs.obs_data_set_int(font, "size", math.floor(h/9.81))
+
+	obs.obs_data_set_obj(settings, "font", font)
+	obs.obs_data_set_string(settings, "text", " " .. name .. " ")
+	obs.obs_data_set_bool(settings, "outline", false)
+
+	local source = obs.obs_source_create_private("text_gdiplus", name .. "-label", settings)
+	--local source = obs.obs_source_create_private("text_ft2_source", name .. "-label", settings)
+	obs.obs_data_release(font)
+	obs.obs_data_release(settings)
+
+	return source
+end
+
+source_def = {}
+source_def.id = "lua_mic_check_status_source"
+source_def.output_flags = bit.bor(obs.OBS_SOURCE_VIDEO, obs.OBS_SOURCE_CUSTOM_DRAW)
+
+source_def.get_name = function()
+	return "Mic Check Status Monitor"
+end
+
+source_def.create = function(source, settings)
+	return {
+		test_label = create_label("Test", status_height)
+	}
+end
+
+source_def.destroy = function(data)
+	if data ~= nil and data.test_label ~= nil then
+		obs.obs_source_release(data.test_label)
+		data.test_label = nil
+	end
+end
+
+function fill(color)
+	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
+	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
+
+	obs.gs_effect_set_color(color_param, color)
+
+	while obs.gs_effect_loop(effect_solid, "Solid") do
+		obs.gs_draw(obs.GS_TRISTRIP, 0, 0)
+	end
+end
+
+function stroke(color)
+	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
+	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
+
+	obs.gs_effect_set_color(color_param, color)
+
+	while obs.gs_effect_loop(effect_solid, "Solid") do
+		obs.gs_draw(obs.GS_LINESTRIP, 0, 0)
+	end
+end
+
+source_def.video_render = function(data, effect)
+	if data == nil then
+		return
+	end
+
+	obs.gs_blend_state_push()
+	obs.gs_reset_blend_state()
+
+	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
+	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
+
+	obs.gs_effect_set_color(color_param, 0xff444444)
+	while obs.gs_effect_loop(effect_solid, "Solid") do
+		obs.gs_draw_sprite(nil, 0, status_width, status_height)
+	end
+
+	obs.gs_matrix_push()
+
+	obs.gs_matrix_translate3f(status_margin, status_margin, 0)
+	--obs.gs_matrix_scale3f(status_width - status_margin*2, status_height - status_margin*2, 1)
+
+	if data.test_label ~= nil then
+		obs.obs_source_video_render(data.test_label)
+	end
+
+	obs.gs_matrix_pop()
+
+	obs.gs_blend_state_pop()
+end
+
+source_def.get_width = function(data)
+	return status_width
+end
+
+source_def.get_height = function(data)
+	return status_height
+end
+
+obs.obs_register_source(source_def)
