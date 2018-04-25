@@ -547,15 +547,20 @@ source_def.get_name = function()
 end
 
 source_def.create = function(source, settings)
-	return {
-		test_label = create_label("Test", status_height)
+	local data = {
+		labels = {}
 	}
+	return data
 end
 
 source_def.destroy = function(data)
-	if data ~= nil and data.test_label ~= nil then
-		obs.obs_source_release(data.test_label)
-		data.test_label = nil
+	if data == nil then
+		return
+	end
+
+	for key,label in pairs(data.labels) do
+		obs.obs_source_release(label)
+		tabel.remove(data.labels, key)
 	end
 end
 
@@ -602,8 +607,17 @@ source_def.video_render = function(data, effect)
 	obs.gs_matrix_translate3f(status_margin, status_margin, 0)
 	--obs.gs_matrix_scale3f(status_width - status_margin*2, status_height - status_margin*2, 1)
 
-	if data.test_label ~= nil then
-		obs.obs_source_video_render(data.test_label)
+	for _,rule in pairs(source_rules) do
+		if rule.name then
+			if data.labels[rule.name] == nil then
+				script_log("create " .. rule.name)
+				data.labels[rule.name] = create_label(rule.name, status_height)
+			end
+			if data.labels[rule.name] ~= nil then
+				--script_log("draw " .. rule.name)
+				obs.obs_source_video_render(data.labels[rule.name])
+			end
+		end
 	end
 
 	obs.gs_matrix_pop()
