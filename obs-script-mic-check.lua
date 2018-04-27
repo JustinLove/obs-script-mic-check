@@ -524,8 +524,9 @@ local create_label = function(name, size)
 	local font = obs.obs_data_create()
 
 	obs.obs_data_set_string(font, "face", "Monospace")
-	--obs.obs_data_set_int(font, "flags", 1) -- Bold
+	obs.obs_data_set_int(font, "flags", 0)
 	obs.obs_data_set_int(font, "size", size)
+	obs.obs_data_set_string(font, "style", "Regular")
 
 	obs.obs_data_set_obj(settings, "font", font)
 	obs.obs_data_set_string(settings, "text", " " .. name .. " ")
@@ -561,7 +562,7 @@ source_def.destroy = function(data)
 
 	for key,label in pairs(data.labels) do
 		obs.obs_source_release(label)
-		tabel.remove(data.labels, key)
+		data.labels[key] = nil
 	end
 end
 
