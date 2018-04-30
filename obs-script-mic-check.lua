@@ -14,6 +14,10 @@ local status_height = 500
 local status_font_size = 40
 local status_indent = 100
 
+local text_white = 0xffffff
+local text_yellow = 0x44ffff
+local text_red = 0x4444ff
+
 local alarm_source = ""
 
 local alarm_active = false
@@ -520,7 +524,7 @@ end
 
 obs.obs_register_source(filter_def)
 
-local create_label = function(name, size)
+local create_label = function(name, size, color)
 	local settings = obs.obs_data_create()
 	local font = obs.obs_data_create()
 
@@ -532,6 +536,7 @@ local create_label = function(name, size)
 	obs.obs_data_set_obj(settings, "font", font)
 	obs.obs_data_set_string(settings, "text", " " .. name .. " ")
 	obs.obs_data_set_bool(settings, "outline", false)
+	obs.obs_data_set_int(settings, "color", color)
 
 	local source = obs.obs_source_create_private("text_gdiplus", name .. "-label", settings)
 	--local source = obs.obs_source_create_private("text_ft2_source", name .. "-label", settings)
@@ -553,10 +558,10 @@ source_def.create = function(source, settings)
 	local data = {
 		labels = {}
 	}
-	data.labels['any'] = create_label('Any', status_font_size)
-	data.labels['all'] = create_label('All', status_font_size)
-	data.labels['muted'] = create_label('<x', status_font_size)
-	data.labels['live'] = create_label('<))', status_font_size)
+	data.labels['any'] = create_label('Any', status_font_size, text_white)
+	data.labels['all'] = create_label('All', status_font_size, text_white)
+	data.labels['muted'] = create_label('<x', status_font_size, text_red)
+	data.labels['live'] = create_label('<))', status_font_size, text_white)
 	return data
 end
 
@@ -582,7 +587,7 @@ local function status_item(data, title, rule)
 	if title then
 		if data.labels[title] == nil then
 			script_log("create " .. title)
-			data.labels[title] = create_label(title, status_font_size)
+			data.labels[title] = create_label(title, status_font_size, text_white)
 		end
 		if data.labels[title] ~= nil then
 			--script_log("draw " .. title)
@@ -596,19 +601,28 @@ local function status_item(data, title, rule)
 	obs.gs_matrix_push()
 	obs.gs_matrix_translate3f(status_indent, 0, 0)
 	local items = 0
-	for name,state in pairs(rule.audio_states) do
-		if data.labels[name] == nil then
+	for name,status in pairs(rule.audio_states) do
+		if data.labels[name.."-white"] == nil then
 			script_log("create " .. name)
-			data.labels[name] = create_label(name, status_font_size)
+			data.labels[name.."-white"] = create_label(name, status_font_size, text_white)
 		end
-		if data.labels[name] ~= nil then
-			--script_log("draw " .. rule.name)
-			obs.obs_source_video_render(data.labels[state])
-			obs.gs_matrix_push()
-			obs.gs_matrix_translate3f(50, 0, 0)
-			obs.obs_source_video_render(data.labels[name])
-			obs.gs_matrix_pop()
+		if data.labels[name.."-yellow"] == nil then
+			data.labels[name.."-yellow"] = create_label(name, status_font_size, text_yellow)
 		end
+
+		obs.obs_source_video_render(data.labels[status])
+
+		obs.gs_matrix_push()
+		obs.gs_matrix_translate3f(50, 0, 0)
+		local color = "-white"
+		if audio_sources[name] ~= nil and audio_sources[name].status == status then
+			color = "-yellow"
+		else
+			color = "-white"
+		end
+		obs.obs_source_video_render(data.labels[name..color])
+		obs.gs_matrix_pop()
+
 		obs.gs_matrix_translate3f(0, status_font_size, 0)
 		items = items + 1
 	end
