@@ -12,6 +12,7 @@ local status_margin = 10
 local status_width = 500
 local status_height = 500
 local status_font_size = 40
+local status_indent = 100
 
 local alarm_source = ""
 
@@ -552,6 +553,10 @@ source_def.create = function(source, settings)
 	local data = {
 		labels = {}
 	}
+	data.labels['any'] = create_label('Any', status_font_size)
+	data.labels['all'] = create_label('All', status_font_size)
+	data.labels['mute'] = create_label('<X', status_font_size)
+	data.labels['live'] = create_label('<))', status_font_size)
 	return data
 end
 
@@ -610,6 +615,10 @@ source_def.video_render = function(data, effect)
 	--obs.gs_matrix_scale3f(status_width - status_margin*2, status_height - status_margin*2, 1)
 
 	for _,rule in pairs(source_rules) do
+		obs.gs_effect_set_color(color_param, 0xff666666)
+		while obs.gs_effect_loop(effect_solid, "Solid") do
+			obs.gs_draw_sprite(nil, 0, status_width - status_margin*2, status_font_size)
+		end
 		if rule.name then
 			if data.labels[rule.name] == nil then
 				script_log("create " .. rule.name)
@@ -620,6 +629,31 @@ source_def.video_render = function(data, effect)
 				obs.obs_source_video_render(data.labels[rule.name])
 			end
 		end
+		obs.gs_matrix_translate3f(0, status_font_size, 0)
+		if rule.operator == 'any' or rule.operator == 'all' then
+			obs.obs_source_video_render(data.labels[rule.operator])
+		end
+		obs.gs_matrix_push()
+		obs.gs_matrix_translate3f(status_indent, 0, 0)
+		local items = 0
+		for name,state in pairs(rule.audio_states) do
+			if data.labels[name] == nil then
+				script_log("create " .. name)
+				data.labels[name] = create_label(name, status_font_size)
+			end
+			if data.labels[name] ~= nil then
+				--script_log("draw " .. rule.name)
+				obs.obs_source_video_render(data.labels[state])
+				obs.gs_matrix_push()
+				obs.gs_matrix_translate3f(50, 0, 0)
+				obs.obs_source_video_render(data.labels[name])
+				obs.gs_matrix_pop()
+			end
+			obs.gs_matrix_translate3f(0, status_font_size, 0)
+			items = items + 1
+		end
+		obs.gs_matrix_pop()
+		obs.gs_matrix_translate3f(0, status_font_size * math.max(1, items), 0)
 	end
 
 	obs.gs_matrix_pop()
