@@ -558,8 +558,10 @@ source_def.create = function(source, settings)
 	local data = {
 		labels = {}
 	}
-	data.labels['any'] = create_label('Any', status_font_size, text_white)
-	data.labels['all'] = create_label('All', status_font_size, text_white)
+	data.labels['any-white'] = create_label('Any', status_font_size, text_white)
+	data.labels['all-white'] = create_label('All', status_font_size, text_white)
+	data.labels['any-yellow'] = create_label('Any', status_font_size, text_yellow)
+	data.labels['all-yellow'] = create_label('All', status_font_size, text_yellow)
 	data.labels['muted'] = create_label('<x', status_font_size, text_red)
 	data.labels['live'] = create_label('<))', status_font_size, text_white)
 	return data
@@ -596,7 +598,11 @@ local function status_item(data, title, rule)
 	end
 	obs.gs_matrix_translate3f(0, status_font_size, 0)
 	if rule.operator == 'any' or rule.operator == 'all' then
-		obs.obs_source_video_render(data.labels[rule.operator])
+		if run_rule(rule) then
+			obs.obs_source_video_render(data.labels[rule.operator.."-yellow"])
+		else
+			obs.obs_source_video_render(data.labels[rule.operator.."-white"])
+		end
 	end
 	obs.gs_matrix_push()
 	obs.gs_matrix_translate3f(status_indent, 0, 0)
