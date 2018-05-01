@@ -506,10 +506,6 @@ filter_def.get_height = function(filter)
 end
 
 filter_def.video_render = function(filter, effect)
-	obs.obs_source_skip_video_filter(filter.context)
-end
-
-filter_def.video_tick = function(filter, seconds)
 	local target = obs.obs_filter_get_target(filter.context)
 	if target ~= nil then
 		filter.width = obs.obs_source_get_base_width(target)
@@ -520,7 +516,11 @@ filter_def.video_tick = function(filter, seconds)
 		local name = obs.obs_source_get_name(parent)
 		source_rules[filter.id].name = name
 	end
+	obs.obs_source_skip_video_filter(filter.context)
 end
+
+-- video tick holds the sources mutex, which can conflict with property enumeration in the script
+--filter_def.video_tick = function(filter, seconds) end
 
 obs.obs_register_source(filter_def)
 
