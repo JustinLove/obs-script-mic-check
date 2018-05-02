@@ -16,7 +16,6 @@ local status_indent = 100
 
 local text_white = 0xffffff
 local text_yellow = 0x44ffff
-local text_red = 0x4444ff
 
 local alarm_source = ""
 
@@ -560,6 +559,22 @@ local create_label = function(name, size, color)
 	return source
 end
 
+function image_source_load(image, file)
+	obs.obs_enter_graphics();
+	obs.gs_image_file_free(image);
+	obs.obs_leave_graphics();
+
+	obs.gs_image_file_init(image, file);
+
+	obs.obs_enter_graphics();
+	obs.gs_image_file_init_texture(image);
+	obs.obs_leave_graphics();
+
+	if not image.loaded then
+		print("failed to load texture " .. file);
+	end
+end
+
 source_def = {}
 source_def.id = "lua_mic_check_status_source"
 source_def.output_flags = bit.bor(obs.OBS_SOURCE_VIDEO, obs.OBS_SOURCE_CUSTOM_DRAW)
@@ -571,14 +586,17 @@ end
 source_def.create = function(source, settings)
 	local data = {
 		labels = {},
+		live_image = obs.gs_image_file(),
+		mute_image = obs.gs_image_file(),
 		height = status_height,
 	}
 	data.labels['any-white'] = create_label('Any', status_font_size, text_white)
 	data.labels['all-white'] = create_label('All', status_font_size, text_white)
 	data.labels['any-yellow'] = create_label('Any', status_font_size, text_yellow)
 	data.labels['all-yellow'] = create_label('All', status_font_size, text_yellow)
-	data.labels['muted'] = create_label('<x', status_font_size, text_red)
-	data.labels['live'] = create_label('<))', status_font_size, text_white)
+
+	image_source_load(data.live_image, "../../data/obs-studio/themes/Dark/unmute.png")
+	image_source_load(data.mute_image, "../../data/obs-studio/themes/Dark/mute.png")
 	return data
 end
 
@@ -591,9 +609,15 @@ source_def.destroy = function(data)
 		obs.obs_source_release(label)
 		data.labels[key] = nil
 	end
+
+	obs.obs_enter_graphics()
+	obs.gs_image_file_free(data.live_image)
+	obs.gs_image_file_free(data.mute_image)
+	obs.obs_leave_graphics()
 end
 
 local function status_item(data, title, rule, controlling)
+	local effect_default = obs.obs_get_base_effect(obs.OBS_EFFECT_DEFAULT)
 	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
 	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
 
@@ -643,7 +667,18 @@ local function status_item(data, title, rule, controlling)
 			data.labels[name.."-yellow"] = create_label(name, status_font_size, text_yellow)
 		end
 
-		obs.obs_source_video_render(data.labels[status])
+		local image = data.live_image
+		if status == 'muted' then
+			image = data.mute_image
+		end
+
+		obs.gs_matrix_push()
+		obs.gs_matrix_translate3f(0.1 * status_font_size, 0.1 * status_font_size, 0)
+		obs.gs_matrix_scale3f(0.8 * status_font_size / image.cy, 0.8 * status_font_size / image.cy, 0)
+		while obs.gs_effect_loop(effect_default, "Draw") do
+			obs.obs_source_draw(image.texture, 0, 0, image.cx, image.cy, false);
+		end
+		obs.gs_matrix_pop()
 
 		obs.gs_matrix_push()
 		obs.gs_matrix_translate3f(50, 0, 0)
