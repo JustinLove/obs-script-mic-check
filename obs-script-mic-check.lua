@@ -592,11 +592,15 @@ source_def.destroy = function(data)
 	end
 end
 
-local function status_item(data, title, rule)
+local function status_item(data, title, rule, controlling)
 	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
 	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
 
-	obs.gs_effect_set_color(color_param, 0xff666666)
+	if controlling then
+		obs.gs_effect_set_color(color_param, 0xff008800)
+	else
+		obs.gs_effect_set_color(color_param, 0xff666666)
+	end
 	while obs.gs_effect_loop(effect_solid, "Solid") do
 		obs.gs_draw_sprite(nil, 0, status_width - status_margin*2, status_font_size)
 	end
@@ -671,10 +675,20 @@ source_def.video_render = function(data, effect)
 	obs.gs_matrix_translate3f(status_margin, status_margin, 0)
 	--obs.gs_matrix_scale3f(status_width - status_margin*2, status_height - status_margin*2, 1)
 
+	local found_first_active = false
+
 	for _,rule in pairs(source_rules) do
-		status_item(data, rule.name, rule)
+		local controlling = false
+		if not found_first_active and rule.name then
+			local source = video_sources[rule.name]
+			if source and source.active == 'active' then
+				found_first_active = true
+				controlling = true
+			end
+		end
+		status_item(data, rule.name, rule, controlling)
 	end
-	status_item(data, "Default", default_rule)
+	status_item(data, "Default", default_rule, not found_first_active)
 
 	obs.gs_matrix_pop()
 
