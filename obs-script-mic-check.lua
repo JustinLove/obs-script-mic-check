@@ -440,6 +440,15 @@ end
 
 local next_filter_id = 0
 
+function update_filter_info(filter)
+	--script_log("update filter info")
+	local parent = obs.obs_filter_get_parent(filter.context)
+	if parent ~= nil then
+		local name = obs.obs_source_get_name(parent)
+		source_rules[filter.id].name = name
+	end
+end
+
 filter_def = {}
 filter_def.id = "lua_mic_check_properties_filter"
 filter_def.type = obs.OBS_SOURCE_TYPE_FILTER
@@ -457,12 +466,22 @@ filter_def.create = function(settings, source)
 		width = 100,
 		height = 100,
 	}
+	filter.bootstrap = function()
+		update_filter_info(filter)
+		obs.remove_current_callback()
+	end
+	filter.update = function()
+		update_filter_info(filter)
+	end
 	next_filter_id = next_filter_id + 1
 
 	if source_rules[filter.id] == nil then
 		source_rules[filter.id] = {}
 	end
 	bootstrap_rule_settings(source_rules[filter.id], settings)
+
+	obs.timer_add(filter.bootstrap, 100)
+	obs.timer_add(filter.update, 10000)
 
 	return filter
 end
@@ -510,11 +529,6 @@ filter_def.video_render = function(filter, effect)
 	if target ~= nil then
 		filter.width = obs.obs_source_get_base_width(target)
 		filter.height = obs.obs_source_get_base_height(target)
-	end
-	local parent = obs.obs_filter_get_parent(filter.context)
-	if parent ~= nil then
-		local name = obs.obs_source_get_name(parent)
-		source_rules[filter.id].name = name
 	end
 	obs.obs_source_skip_video_filter(filter.context)
 end
