@@ -570,7 +570,8 @@ end
 
 source_def.create = function(source, settings)
 	local data = {
-		labels = {}
+		labels = {},
+		height = status_height,
 	}
 	data.labels['any-white'] = create_label('Any', status_font_size, text_white)
 	data.labels['all-white'] = create_label('All', status_font_size, text_white)
@@ -597,6 +598,7 @@ local function status_item(data, title, rule, controlling)
 	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
 
 	local violation = run_rule(rule)
+	local height = 0
 
 	if controlling then
 		if violation then
@@ -621,6 +623,7 @@ local function status_item(data, title, rule, controlling)
 		end
 	end
 	obs.gs_matrix_translate3f(0, status_font_size, 0)
+	height = height + status_font_size
 	if rule.operator == 'any' or rule.operator == 'all' then
 		if violation then
 			obs.obs_source_video_render(data.labels[rule.operator.."-yellow"])
@@ -657,7 +660,10 @@ local function status_item(data, title, rule, controlling)
 		items = items + 1
 	end
 	obs.gs_matrix_pop()
-	obs.gs_matrix_translate3f(0, status_font_size * math.max(1, items), 0)
+	local offset = status_font_size * math.max(1, items) 
+	obs.gs_matrix_translate3f(0, offset, 0)
+	height = height + offset
+	return height
 end
 
 source_def.video_render = function(data, effect)
@@ -673,15 +679,15 @@ source_def.video_render = function(data, effect)
 
 	obs.gs_effect_set_color(color_param, 0xff444444)
 	while obs.gs_effect_loop(effect_solid, "Solid") do
-		obs.gs_draw_sprite(nil, 0, status_width, status_height)
+		obs.gs_draw_sprite(nil, 0, status_width, data.height)
 	end
 
 	obs.gs_matrix_push()
 
 	obs.gs_matrix_translate3f(status_margin, status_margin, 0)
-	--obs.gs_matrix_scale3f(status_width - status_margin*2, status_height - status_margin*2, 1)
 
 	local found_first_active = false
+	local height = 0
 
 	for _,rule in pairs(source_rules) do
 		local controlling = false
@@ -692,9 +698,11 @@ source_def.video_render = function(data, effect)
 				controlling = true
 			end
 		end
-		status_item(data, rule.name, rule, controlling)
+		height = height + status_item(data, rule.name, rule, controlling)
 	end
-	status_item(data, "Default", default_rule, not found_first_active)
+	height = height + status_item(data, "Default", default_rule, not found_first_active)
+
+	data.height = height + status_margin * 2
 
 	obs.gs_matrix_pop()
 
@@ -706,7 +714,7 @@ source_def.get_width = function(data)
 end
 
 source_def.get_height = function(data)
-	return status_height
+	return data.height
 end
 
 obs.obs_register_source(source_def)
