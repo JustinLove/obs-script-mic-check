@@ -2,7 +2,6 @@
   - image path?
   - or copy with licence?
   - image source?
-- highlight alarming rule
 - alarm status timer
 - deemphasize sources not in current scene
 - freetype2

@@ -596,8 +596,14 @@ local function status_item(data, title, rule, controlling)
 	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
 	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
 
+	local violation = run_rule(rule)
+
 	if controlling then
-		obs.gs_effect_set_color(color_param, 0xff008800)
+		if violation then
+			obs.gs_effect_set_color(color_param, 0xff888800)
+		else
+			obs.gs_effect_set_color(color_param, 0xff008800)
+		end
 	else
 		obs.gs_effect_set_color(color_param, 0xff666666)
 	end
@@ -616,7 +622,7 @@ local function status_item(data, title, rule, controlling)
 	end
 	obs.gs_matrix_translate3f(0, status_font_size, 0)
 	if rule.operator == 'any' or rule.operator == 'all' then
-		if run_rule(rule) then
+		if violation then
 			obs.obs_source_video_render(data.labels[rule.operator.."-yellow"])
 		else
 			obs.obs_source_video_render(data.labels[rule.operator.."-white"])
