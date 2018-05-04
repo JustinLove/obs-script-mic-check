@@ -712,7 +712,11 @@ source_def.video_render = function(data, effect)
 	local effect_solid = obs.obs_get_base_effect(obs.OBS_EFFECT_SOLID)
 	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
 
-	obs.gs_effect_set_color(color_param, 0xff444444)
+	if alarm_active then
+		obs.gs_effect_set_color(color_param, 0xffaa4444)
+	else
+		obs.gs_effect_set_color(color_param, 0xff444444)
+	end
 	while obs.gs_effect_loop(effect_solid, "Solid") do
 		obs.gs_draw_sprite(nil, 0, status_width, data.height)
 	end
