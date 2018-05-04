@@ -1,4 +1,3 @@
-- alarm status timer
 - deemphasize sources not in current scene
 - freetype2
   - can't use freetype2 on windows?

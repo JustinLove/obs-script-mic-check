@@ -22,6 +22,7 @@ local alarm_source = ""
 local alarm_active = false
 local trigger_active = false
 local trigger_time = os.time()
+local trigger_timeout = 0
 local audio_sources = {}
 local video_sources = {}
 local default_rule = {
@@ -69,6 +70,7 @@ end
 function trigger_alarm(violation, timeout)
 	if violation then
 		if trigger_active then
+			trigger_timeout = timeout
 			if os.difftime(os.time(), trigger_time) > timeout then
 				set_alarm(true)
 			end
@@ -76,6 +78,7 @@ function trigger_alarm(violation, timeout)
 			script_log("trigger")
 			trigger_active = true
 			trigger_time = os.time()
+			trigger_timeout = timeout
 		end
 	else
 		--script_log("no violation")
@@ -559,6 +562,13 @@ local create_label = function(name, size, color)
 	return source
 end
 
+local set_label_text = function(source, text)
+	local settings = obs.obs_source_get_settings(source)
+	obs.obs_data_set_string(settings, "text", " " .. text .. " ")
+	obs.obs_source_update(source, settings)
+	obs.obs_data_release(settings)
+end
+
 function image_source_load(image, file)
 	obs.obs_enter_graphics();
 	obs.gs_image_file_free(image);
@@ -594,6 +604,7 @@ source_def.create = function(source, settings)
 	data.labels['all-white'] = create_label('All', status_font_size, text_white)
 	data.labels['any-yellow'] = create_label('Any', status_font_size, text_yellow)
 	data.labels['all-yellow'] = create_label('All', status_font_size, text_yellow)
+	data.labels['duration'] = create_label('duration', status_font_size, text_white)
 
 	image_source_load(data.live_image, "../../data/obs-studio/themes/Dark/unmute.png")
 	image_source_load(data.mute_image, "../../data/obs-studio/themes/Dark/mute.png")
@@ -725,8 +736,23 @@ source_def.video_render = function(data, effect)
 
 	obs.gs_matrix_translate3f(status_margin, status_margin, 0)
 
+
+	if trigger_active then
+		local duration = os.difftime(os.time(), trigger_time)
+		local progress = math.min(1, duration / trigger_timeout)
+		obs.gs_effect_set_color(color_param, 0xffaa4444)
+		while obs.gs_effect_loop(effect_solid, "Solid") do
+			obs.gs_draw_sprite(nil, 0, (status_width - status_margin*2) * progress, status_font_size)
+		end
+
+		set_label_text(data.labels['duration'], string.format("%d", duration))
+		obs.obs_source_video_render(data.labels['duration'])
+	end
+
+	obs.gs_matrix_translate3f(0, status_font_size, 0)
+	local height = status_font_size
+
 	local found_first_active = false
-	local height = 0
 
 	for _,rule in pairs(source_rules) do
 		local controlling = false
