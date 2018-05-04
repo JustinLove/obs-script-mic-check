@@ -204,12 +204,12 @@ function check_alarm()
 		if rule.name then
 			local source = video_sources[rule.name]
 			if source and source.active == 'active' then
-				trigger_alarm(run_rule(rule))
+				trigger_alarm(run_rule(rule), rule.timeout)
 				return
 			end
 		end
 	end
-	trigger_alarm(run_rule(default_rule))
+	trigger_alarm(run_rule(default_rule), default_rule.timeout)
 end
 
 function test_alarm(props, p, set)
