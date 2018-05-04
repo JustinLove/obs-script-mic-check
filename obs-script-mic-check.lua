@@ -781,14 +781,30 @@ source_def.video_render = function(data, effect)
 
 	for _,rule in pairs(source_rules) do
 		local controlling = false
+		local source = video_sources[rule.name]
 		if not found_first_active and rule.name then
-			local source = video_sources[rule.name]
 			if source and source.active == 'active' then
 				found_first_active = true
 				controlling = true
 			end
 		end
-		height = height + status_item(data, rule.name, rule, controlling)
+		if source and source.in_current_scene then
+			height = height + status_item(data, rule.name, rule, controlling)
+		end
+	end
+
+	for _,rule in pairs(source_rules) do
+		local controlling = false
+		local source = video_sources[rule.name]
+		if not found_first_active and rule.name then
+			if source and source.active == 'active' then
+				found_first_active = true
+				controlling = true
+			end
+		end
+		if not (source and source.in_current_scene) then
+			height = height + status_item(data, rule.name, rule, controlling)
+		end
 	end
 	height = height + status_item(data, "Default", default_rule, not found_first_active)
 
