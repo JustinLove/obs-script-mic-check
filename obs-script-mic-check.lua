@@ -16,6 +16,7 @@ local status_indent = 100
 
 local text_white = 0xffffff
 local text_yellow = 0x44ffff
+local text_gray = 0xaaaaaa
 
 local alarm_source = ""
 
@@ -648,6 +649,7 @@ local function status_item(data, title, rule, controlling)
 
 	local violation = run_rule(rule)
 	local source = video_sources[rule.name]
+	local in_current_scene = title == 'Default' or (source ~= nil and source.in_current_scene)
 	local height = 0
 
 	if controlling then
@@ -656,7 +658,7 @@ local function status_item(data, title, rule, controlling)
 		else
 			obs.gs_effect_set_color(color_param, 0xff008800)
 		end
-	elseif title == 'Default' or (source ~= nil and source.in_current_scene) then
+	elseif in_current_scene then 
 		obs.gs_effect_set_color(color_param, 0xff666666)
 	else
 		obs.gs_effect_set_color(color_param, 0xff777777)
@@ -664,14 +666,20 @@ local function status_item(data, title, rule, controlling)
 	while obs.gs_effect_loop(effect_solid, "Solid") do
 		obs.gs_draw_sprite(nil, 0, status_width - status_margin*2, status_font_size)
 	end
+	local heading = title.."-white"
+	local text_color = text_white
+	if not in_current_scene then
+		heading = title.."-gray"
+		text_color = text_gray
+	end
 	if title then
-		if data.labels[title] == nil then
-			script_log("create " .. title)
-			data.labels[title] = create_label(title, status_font_size, text_white)
+		if data.labels[heading] == nil then
+			script_log("create " .. heading)
+			data.labels[heading] = create_label(title, status_font_size, text_color)
 		end
-		if data.labels[title] ~= nil then
-			--script_log("draw " .. title)
-			obs.obs_source_video_render(data.labels[title])
+		if data.labels[heading] ~= nil then
+			--script_log("draw " .. heading)
+			obs.obs_source_video_render(data.labels[heading])
 		end
 	end
 	obs.gs_matrix_translate3f(0, status_font_size, 0)
