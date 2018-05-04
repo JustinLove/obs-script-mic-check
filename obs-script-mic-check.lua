@@ -139,6 +139,7 @@ function bootstrap_rule_settings(rule, settings)
 					status = audio_status(false),
 					active = video_status(false),
 					flags = 0,
+					in_current_scene = false,
 				}
 			end
 		end
@@ -237,17 +238,22 @@ function video_status(active)
 end
 
 function examine_source_states()
+	local current_source = obs.obs_frontend_get_current_scene()
+	local current_scene = obs.obs_scene_from_source(current_source)
 	enum_sources(function(source)
 		local name = obs.obs_source_get_name(source)
 		local status = audio_status(obs.obs_source_muted(source))
 		local active = video_status(obs.obs_source_active(source))
 		local flags = obs.obs_source_get_output_flags(source)
+		local item = obs.obs_scene_find_source(current_scene, name)
+		local in_current_scene = item ~= nil
 		--script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
 		local info = {
 			name = name,
 			status = status,
 			active = active,
 			flags = flags,
+			in_current_scene = in_current_scene,
 		}
 		if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
 			audio_sources[name] = info
@@ -256,6 +262,7 @@ function examine_source_states()
 			video_sources[name] = info
 		end
 	end)
+	obs.obs_source_release(current_source)
 	check_alarm()
 	--return true
 end
@@ -298,6 +305,12 @@ end
 
 function source_destroy(calldata)
 	examine_source_states()
+end
+
+function frontend_event(event, private_data)
+	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
+		examine_source_states()
+	end
 end
 
 function hook_source(source)
@@ -422,6 +435,7 @@ end
 function script_load(settings)
 	script_log("load")
 	--dump_obs()
+	obs.obs_frontend_add_event_callback(frontend_event)
 
 	bootstrap_rule_settings(default_rule, settings)
 
@@ -633,6 +647,7 @@ local function status_item(data, title, rule, controlling)
 	local color_param = obs.gs_effect_get_param_by_name(effect_solid, "color");
 
 	local violation = run_rule(rule)
+	local source = video_sources[rule.name]
 	local height = 0
 
 	if controlling then
@@ -641,8 +656,10 @@ local function status_item(data, title, rule, controlling)
 		else
 			obs.gs_effect_set_color(color_param, 0xff008800)
 		end
-	else
+	elseif title == 'Default' or (source ~= nil and source.in_current_scene) then
 		obs.gs_effect_set_color(color_param, 0xff666666)
+	else
+		obs.gs_effect_set_color(color_param, 0xff777777)
 	end
 	while obs.gs_effect_loop(effect_solid, "Solid") do
 		obs.gs_draw_sprite(nil, 0, status_width - status_margin*2, status_font_size)
