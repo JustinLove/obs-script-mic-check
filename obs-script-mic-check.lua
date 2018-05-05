@@ -14,9 +14,9 @@ local status_height = 500
 local status_font_size = 40
 local status_indent = 100
 
-local text_white = 0xffffff
-local text_yellow = 0x44ffff
-local text_gray = 0xaaaaaa
+local text_white = 0xffffffff
+local text_yellow = 0xff44ffff
+local text_gray = 0xffaaaaaa
 
 local alarm_source = ""
 
@@ -559,18 +559,17 @@ local create_label = function(name, size, color)
 	local settings = obs.obs_data_create()
 	local font = obs.obs_data_create()
 
-	obs.obs_data_set_string(font, "face", "Monospace")
-	obs.obs_data_set_int(font, "flags", 0)
-	obs.obs_data_set_int(font, "size", size)
-	obs.obs_data_set_string(font, "style", "Regular")
+	obs.obs_data_set_string(font, "face", "Arial")
+	obs.obs_data_set_int(font, "size", size * 0.90) -- freetype is larger than gdiplus
 
 	obs.obs_data_set_obj(settings, "font", font)
 	obs.obs_data_set_string(settings, "text", " " .. name .. " ")
-	obs.obs_data_set_bool(settings, "outline", false)
-	obs.obs_data_set_int(settings, "color", color)
+	obs.obs_data_set_int(settings, "color", color) -- gdiplus
+	obs.obs_data_set_int(settings, "color1", color) -- freetype
+	obs.obs_data_set_int(settings, "color2", color) -- freetype
 
-	local source = obs.obs_source_create_private("text_gdiplus", name .. "-label", settings)
-	--local source = obs.obs_source_create_private("text_ft2_source", name .. "-label", settings)
+	--local source = obs.obs_source_create_private("text_gdiplus", name .. "-label", settings)
+	local source = obs.obs_source_create_private("text_ft2_source", name .. "-label", settings)
 	obs.obs_data_release(font)
 	obs.obs_data_release(settings)
 
@@ -782,6 +781,10 @@ source_def.video_render = function(data, effect)
 	for _,rule in pairs(source_rules) do
 		local controlling = false
 		local source = video_sources[rule.name]
+		local title = rule.name
+		if title == nil then
+			title = "--"
+		end
 		if not found_first_active and rule.name then
 			if source and source.active == 'active' then
 				found_first_active = true
@@ -789,13 +792,17 @@ source_def.video_render = function(data, effect)
 			end
 		end
 		if source and source.in_current_scene then
-			height = height + status_item(data, rule.name, rule, controlling)
+			height = height + status_item(data, title, rule, controlling)
 		end
 	end
 
 	for _,rule in pairs(source_rules) do
 		local controlling = false
 		local source = video_sources[rule.name]
+		local title = rule.name
+		if title == nil then
+			title = "--"
+		end
 		if not found_first_active and rule.name then
 			if source and source.active == 'active' then
 				found_first_active = true
@@ -803,7 +810,7 @@ source_def.video_render = function(data, effect)
 			end
 		end
 		if not (source and source.in_current_scene) then
-			height = height + status_item(data, rule.name, rule, controlling)
+			height = height + status_item(data, title, rule, controlling)
 		end
 	end
 	height = height + status_item(data, "Default", default_rule, not found_first_active)
