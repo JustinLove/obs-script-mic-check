@@ -447,7 +447,6 @@ end
 -- A function named script_update will be called when settings are changed
 function script_update(settings)
 	script_log("update")
-	my_settings = settings
 
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 
