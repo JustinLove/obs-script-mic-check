@@ -24,6 +24,7 @@ local alarm_active = false
 local trigger_active = false
 local trigger_time = os.time()
 local trigger_timeout = 0
+local obs_events = {}
 local audio_sources = {}
 local video_sources = {}
 local default_rule = {
@@ -181,6 +182,16 @@ function audio_default_settings(settings)
 	end
 end
 
+function process_events()
+	for _,event in ipairs(obs_events) do
+		script_log("event " .. event.event)
+		if event.event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
+			examine_source_states()
+		end
+	end
+	obs_events = {}
+end
+
 function run_rule(rule)
 	for name,status in pairs(rule.audio_states) do
 		local cache = audio_sources[name]
@@ -215,6 +226,11 @@ function check_alarm()
 		end
 	end
 	trigger_alarm(run_rule(default_rule), default_rule.timeout)
+end
+
+function tick()
+	process_events()
+	check_alarm()
 end
 
 function test_alarm(props, p, set)
@@ -309,8 +325,14 @@ function source_destroy(calldata)
 end
 
 function frontend_event(event, private_data)
+	script_log("frontend event " .. event)
 	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
-		examine_source_states()
+		obs_events[#obs_events+1] = {
+			event = event
+		}
+
+		-- deadlocks OBS on startup
+		--examine_source_states()
 	end
 end
 
@@ -436,6 +458,7 @@ end
 function script_load(settings)
 	script_log("load")
 	--dump_obs()
+
 	obs.obs_frontend_add_event_callback(frontend_event)
 
 	bootstrap_rule_settings(default_rule, settings)
@@ -446,7 +469,7 @@ function script_load(settings)
 	local sh = obs.obs_get_signal_handler()
 	obs.signal_handler_connect(sh, "source_create", source_create)
 	obs.signal_handler_connect(sh, "source_destroy", source_destroy)
-	obs.timer_add(check_alarm, sample_rate)
+	obs.timer_add(tick, sample_rate)
 end
 
 function script_unload()
