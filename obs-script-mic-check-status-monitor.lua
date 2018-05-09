@@ -35,6 +35,13 @@ function source_mute(calldata)
 	end
 end
 
+local update_default_rule = function(calldata)
+	script_log('receive update')
+	local json = obs.calldata_string(calldata, 'rule_json')
+	default_rule = deserialize_rule(json)
+	dump_rule(default_rule)
+end
+
 -- A function named script_description returns the description shown to
 -- the user
 local description = [[Play an alarm if mic state not appropriate for sources shown.
@@ -58,6 +65,8 @@ function script_load(settings)
 	local sh = obs.obs_get_signal_handler()
 	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
+	obs.signal_handler_add(sh, "void lua_mic_check_default_rule(string rule_json)")
+	obs.signal_handler_connect(sh, "lua_mic_check_default_rule", update_default_rule)
 end
 
 local create_label = function(name, size, color)

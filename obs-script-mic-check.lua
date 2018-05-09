@@ -298,6 +298,13 @@ function script_update(settings)
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 
 	update_rule_settings(default_rule, settings)
+
+	local sh = obs.obs_get_signal_handler()
+	local calldata = obs.calldata()
+	obs.calldata_init(calldata)
+	obs.calldata_set_string(calldata, "rule_json", serialize_rule(default_rule))
+	obs.signal_handler_signal(sh, "lua_mic_check_default_rule", calldata)
+	obs.calldata_free(calldata)
 end
 
 -- a function named script_load will be called on startup
@@ -319,6 +326,7 @@ function script_load(settings)
 	obs.signal_handler_connect(sh, "source_deactivate", source_deactivate)
 
 	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
+	obs.signal_handler_add(sh, "void lua_mic_check_default_rule(string rule_json)")
 	obs.timer_add(tick, sample_rate)
 end
 
