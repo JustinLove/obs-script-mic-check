@@ -9,11 +9,10 @@ end
 dofile(script_path() .. "obs-script-mic-check-common.lua")
 
 function source_mute(calldata)
-	script_log("receive mute")
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
 	local name = obs.obs_source_get_name(source)
-	script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	--script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	audio_sources[name] = {
 		name = name,
 	}
@@ -61,6 +60,9 @@ function script_load(settings)
 	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
 	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
+	obs.signal_handler_add(sh, "void lua_mic_check_request_audio_sources()")
+
+	obs.signal_handler_signal(sh, "lua_mic_check_request_audio_sources", nil)
 end
 
 local next_filter_id = 0

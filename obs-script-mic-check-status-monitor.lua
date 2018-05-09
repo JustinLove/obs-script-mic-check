@@ -19,11 +19,11 @@ local text_gray = 0xffaaaaaa
 dofile(script_path() .. "obs-script-mic-check-common.lua")
 
 function source_mute(calldata)
-	script_log("receive mute")
+	--script_log("receive mute")
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
 	local name = obs.obs_source_get_name(source)
-	script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	--script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	local cache = audio_sources[name]
 	if cache then
 		cache.status = status

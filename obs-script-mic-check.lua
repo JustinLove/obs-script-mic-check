@@ -86,6 +86,8 @@ function process_events()
 		script_log("event " .. event.event)
 		if event.event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
 			examine_source_states()
+		elseif event.event == 'request_audio_sources' then
+			examine_source_states()
 		end
 	end
 	obs_events = {}
@@ -159,7 +161,6 @@ function source_mute(calldata)
 	if cache then
 		cache.status = status
 		check_alarm()
-		script_log("send mute")
 		local sh = obs.obs_get_signal_handler()
 		obs.signal_handler_signal(sh, "lua_mic_check_source_mute", calldata)
 	end
@@ -173,6 +174,12 @@ end
 
 function source_destroy(calldata)
 	examine_source_states()
+end
+
+function request_audio_sources()
+	obs_events[#obs_events+1] = {
+		event = 'request_audio_sources'
+	}
 end
 
 function frontend_event(event, private_data)
@@ -327,6 +334,8 @@ function script_load(settings)
 
 	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
 	obs.signal_handler_add(sh, "void lua_mic_check_default_rule(string rule_json)")
+	obs.signal_handler_add(sh, "void lua_mic_check_request_audio_sources()")
+	obs.signal_handler_connect(sh, "lua_mic_check_request_audio_sources", request_audio_sources)
 	obs.timer_add(tick, sample_rate)
 end
 
