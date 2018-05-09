@@ -78,6 +78,9 @@ function script_load(settings)
 	obs.signal_handler_connect(sh, "lua_mic_check_default_rule", update_default_rule)
 	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_rule", update_source_rule)
+	obs.signal_handler_add(sh, "void lua_mic_check_request_audio_sources()")
+
+	obs.signal_handler_signal(sh, "lua_mic_check_request_audio_sources", nil)
 end
 
 local create_label = function(name, size, color)
