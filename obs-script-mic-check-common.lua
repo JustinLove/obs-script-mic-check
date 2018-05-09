@@ -23,6 +23,48 @@ function dump_rule(rule)
 	script_log(rule.operator .. "(" .. table.concat(items, ",") .. ")")
 end
 
+function serialize_rule(rule)
+	local data = obs.obs_data_create()
+	local states = obs.obs_data_create()
+
+	obs.obs_data_set_int(data, 'timeout', rule.timeout)
+	obs.obs_data_set_string(data, 'operator', rule.operator)
+	obs.obs_data_set_obj(data, 'audio_states', states)
+
+	for name,state in pairs(rule.audio_states) do
+		obs.obs_data_set_string(states, name, state)
+	end
+
+	local json = obs.obs_data_get_json(data)
+
+	obs.obs_data_release(data)
+	obs.obs_data_release(states)
+
+	return json
+end
+
+function deserialize_rule(json)
+	local data = obs.obs_data_create_from_json(json)
+	local rule = {audio_states = {}}
+
+	rule.timeout = obs.obs_data_get_int(data, 'timeout')
+	rule.operator = obs.obs_data_get_string(data, 'operator')
+
+	local states = obs.obs_data_get_obj(data, 'audio_states')
+
+	for name,audio in pairs(audio_sources) do
+		local state = obs.obs_data_get_string(states, name)
+		if state ~= '' then
+			rule.audio_states[name] = state
+		end
+	end
+
+	obs.obs_data_release(data)
+	obs.obs_data_release(states)
+
+	return rule
+end
+
 function bootstrap_rule_settings(rule, settings)
 	if rule == nil then
 		script_log("bootstrap_rule_settings no rule")
