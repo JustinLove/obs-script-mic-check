@@ -152,6 +152,8 @@ function source_mute(calldata)
 	if cache then
 		cache.status = status
 		check_alarm()
+		script_log("send mute")
+		obs.signal_handler_signal(sh, "lua_mic_check_source_mute", calldata)
 	end
 end
 
@@ -308,11 +310,7 @@ function script_load(settings)
 	obs.signal_handler_connect(sh, "source_activate", source_activate)
 	obs.signal_handler_connect(sh, "source_deactivate", source_deactivate)
 
-	--[[
-	obs.signal_handler_add(sh, "void lua_mic_check_source_active(string name, bool active)")
-	obs.signal_handler_connect(sh, "lua_mic_check_source_active", custom_signal)
-	obs.signal_handler_signal(sh, "lua_mic_check_source_active", name, active)
-	]]
+	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source, bool mute)")
 	obs.timer_add(tick, sample_rate)
 end
 

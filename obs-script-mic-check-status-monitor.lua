@@ -19,32 +19,13 @@ local text_gray = 0xffaaaaaa
 dofile(script_path() .. "obs-script-mic-check-common.lua")
 
 function source_mute(calldata)
+	script_log("receive mute")
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
 	--script_log(obs.obs_source_get_name(source) .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	local cache = audio_sources[obs.obs_source_get_name(source)]
 	if cache then
 		cache.status = status
-	end
-end
-
-function source_create(calldata)
-	local source = obs.calldata_source(calldata, "source")
-	hook_source(source)
-end
-
-function source_destroy(calldata)
-end
-
-function hook_source(source)
-	if source ~= nil then
-		local handler = obs.obs_source_get_signal_handler(source)
-		if handler ~= nil then
-			local flags = obs.obs_source_get_output_flags(source)
-			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
-				obs.signal_handler_connect(handler, "mute", source_mute)
-			end
-		end
 	end
 end
 
@@ -69,8 +50,8 @@ function script_load(settings)
 	script_log("script status load")
 
 	local sh = obs.obs_get_signal_handler()
-	obs.signal_handler_connect(sh, "source_activate", source_activate)
-	obs.signal_handler_connect(sh, "source_deactivate", source_deactivate)
+	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source, bool mute)")
+	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
 end
 
 local create_label = function(name, size, color)
@@ -86,8 +67,10 @@ local create_label = function(name, size, color)
 	obs.obs_data_set_int(settings, "color1", color) -- freetype
 	obs.obs_data_set_int(settings, "color2", color) -- freetype
 
+	obs.obs_enter_graphics();
 	--local source = obs.obs_source_create_private("text_gdiplus", name .. "-label", settings)
 	local source = obs.obs_source_create_private("text_ft2_source", name .. "-label", settings)
+	obs.obs_leave_graphics();
 	obs.obs_data_release(font)
 	obs.obs_data_release(settings)
 
@@ -99,6 +82,14 @@ local set_label_text = function(source, text)
 	obs.obs_data_set_string(settings, "text", " " .. text .. " ")
 	obs.obs_source_update(source, settings)
 	obs.obs_data_release(settings)
+end
+
+local draw_label = function(data, key, name, size, color)
+	if data.labels[key] == nil then
+		script_log("create " .. key)
+		data.labels[key] = create_label(name, size, color)
+	end
+	obs.obs_source_video_render(data.labels[key])
 end
 
 function image_source_load(image, file)
@@ -132,11 +123,6 @@ source_def.create = function(source, settings)
 		mute_image = obs.gs_image_file(),
 		height = status_height,
 	}
-	data.labels['any-white'] = create_label('Any', status_font_size, text_white)
-	data.labels['all-white'] = create_label('All', status_font_size, text_white)
-	data.labels['any-yellow'] = create_label('Any', status_font_size, text_yellow)
-	data.labels['all-yellow'] = create_label('All', status_font_size, text_yellow)
-	data.labels['duration'] = create_label('duration', status_font_size, text_white)
 
 	image_source_load(data.live_image, "../../data/obs-studio/themes/Dark/unmute.png")
 	image_source_load(data.mute_image, "../../data/obs-studio/themes/Dark/mute.png")
@@ -148,14 +134,16 @@ source_def.destroy = function(data)
 		return
 	end
 
+	obs.obs_enter_graphics();
+
 	for key,label in pairs(data.labels) do
 		obs.obs_source_release(label)
 		data.labels[key] = nil
 	end
 
-	obs.obs_enter_graphics()
 	obs.gs_image_file_free(data.live_image)
 	obs.gs_image_file_free(data.mute_image)
+
 	obs.obs_leave_graphics()
 end
 
@@ -190,36 +178,21 @@ local function status_item(data, title, rule, controlling)
 		text_color = text_gray
 	end
 	if title then
-		if data.labels[heading] == nil then
-			script_log("create " .. heading)
-			data.labels[heading] = create_label(title, status_font_size, text_color)
-		end
-		if data.labels[heading] ~= nil then
-			--script_log("draw " .. heading)
-			obs.obs_source_video_render(data.labels[heading])
-		end
+		draw_label(data, heading, title, status_font_size, text_color)
 	end
 	obs.gs_matrix_translate3f(0, status_font_size, 0)
 	height = height + status_font_size
 	if rule.operator == 'any' or rule.operator == 'all' then
 		if violation then
-			obs.obs_source_video_render(data.labels[rule.operator.."-yellow"])
+			draw_label(data, rule.operator..'-yellow', rule.operator, status_font_size, text_yellow)
 		else
-			obs.obs_source_video_render(data.labels[rule.operator.."-white"])
+			draw_label(data, rule.operator..'-white', rule.operator, status_font_size, text_white)
 		end
 	end
 	obs.gs_matrix_push()
 	obs.gs_matrix_translate3f(status_indent, 0, 0)
 	local items = 0
 	for name,status in pairs(rule.audio_states) do
-		if data.labels[name.."-white"] == nil then
-			script_log("create " .. name)
-			data.labels[name.."-white"] = create_label(name, status_font_size, text_white)
-		end
-		if data.labels[name.."-yellow"] == nil then
-			data.labels[name.."-yellow"] = create_label(name, status_font_size, text_yellow)
-		end
-
 		local image = data.live_image
 		if status == 'muted' then
 			image = data.mute_image
@@ -238,10 +211,11 @@ local function status_item(data, title, rule, controlling)
 		local color = "-white"
 		if audio_sources[name] ~= nil and audio_sources[name].status == status then
 			color = "-yellow"
+			draw_label(data, name..'-yellow', name, status_font_size, text_yellow)
 		else
 			color = "-white"
+			draw_label(data, name..'-white', name, status_font_size, text_white)
 		end
-		obs.obs_source_video_render(data.labels[name..color])
 		obs.gs_matrix_pop()
 
 		obs.gs_matrix_translate3f(0, status_font_size, 0)
@@ -285,6 +259,11 @@ source_def.video_render = function(data, effect)
 		obs.gs_effect_set_color(color_param, 0xffaa4444)
 		while obs.gs_effect_loop(effect_solid, "Solid") do
 			obs.gs_draw_sprite(nil, 0, (status_width - status_margin*2) * progress, status_font_size)
+		end
+
+		if data.labels['duration'] == nil then
+			script_log("create duration")
+			data.labels['duration'] = create_label('duration', status_font_size, text_white)
 		end
 
 		set_label_text(data.labels['duration'], string.format("%d", duration))
