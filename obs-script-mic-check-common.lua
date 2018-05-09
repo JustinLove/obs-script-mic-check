@@ -123,7 +123,6 @@ function update_rule_settings(rule, settings)
 	end
 	obs.obs_data_erase(settings, "audio" .. index)
 	dump_rule(rule)
-	check_alarm()
 end
 
 function audio_default_settings(settings)

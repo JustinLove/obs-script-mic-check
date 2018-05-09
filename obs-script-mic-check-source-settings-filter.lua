@@ -8,6 +8,17 @@ end
 
 dofile(script_path() .. "obs-script-mic-check-common.lua")
 
+function source_mute(calldata)
+	script_log("receive mute")
+	local source = obs.calldata_source(calldata, "source")
+	local status = audio_status(obs.obs_source_muted(source))
+	local name = obs.obs_source_get_name(source)
+	script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	audio_sources[name] = {
+		name = name,
+	}
+end
+
 -- A function named script_description returns the description shown to
 -- the user
 local description = [[Play an alarm if mic state not appropriate for sources shown.
@@ -45,6 +56,10 @@ end
 -- a function named script_load will be called on startup
 function script_load(settings)
 	script_log("script filter load")
+
+	local sh = obs.obs_get_signal_handler()
+	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
+	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
 end
 
 local next_filter_id = 0
