@@ -22,10 +22,16 @@ function source_mute(calldata)
 	script_log("receive mute")
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
-	--script_log(obs.obs_source_get_name(source) .. " " .. status .. " " .. obs.obs_source_get_id(source))
-	local cache = audio_sources[obs.obs_source_get_name(source)]
+	local name = obs.obs_source_get_name(source)
+	script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	local cache = audio_sources[name]
 	if cache then
 		cache.status = status
+	else
+		audio_sources[name] = {
+			name = name,
+			status = status,
+		}
 	end
 end
 
@@ -50,7 +56,7 @@ function script_load(settings)
 	script_log("script status load")
 
 	local sh = obs.obs_get_signal_handler()
-	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source, bool mute)")
+	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
 end
 

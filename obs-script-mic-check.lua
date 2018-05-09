@@ -117,6 +117,9 @@ end
 function examine_source_states()
 	local current_source = obs.obs_frontend_get_current_scene()
 	local current_scene = obs.obs_scene_from_source(current_source)
+	local sh = obs.obs_get_signal_handler()
+	local calldata = obs.calldata()
+	obs.calldata_init(calldata)
 	enum_sources(function(source)
 		local name = obs.obs_source_get_name(source)
 		local status = audio_status(obs.obs_source_muted(source))
@@ -134,6 +137,9 @@ function examine_source_states()
 		}
 		if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
 			audio_sources[name] = info
+			obs.calldata_set_ptr(calldata, "source", source)
+			obs.signal_handler_signal(sh, "lua_mic_check_source_mute", calldata)
+
 		end
 		if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
 			video_sources[name] = info
@@ -141,6 +147,7 @@ function examine_source_states()
 	end)
 	obs.obs_source_release(current_source)
 	check_alarm()
+	obs.calldata_free(calldata)
 	--return true
 end
 
@@ -153,6 +160,7 @@ function source_mute(calldata)
 		cache.status = status
 		check_alarm()
 		script_log("send mute")
+		local sh = obs.obs_get_signal_handler()
 		obs.signal_handler_signal(sh, "lua_mic_check_source_mute", calldata)
 	end
 end
@@ -310,7 +318,7 @@ function script_load(settings)
 	obs.signal_handler_connect(sh, "source_activate", source_activate)
 	obs.signal_handler_connect(sh, "source_deactivate", source_deactivate)
 
-	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source, bool mute)")
+	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
 	obs.timer_add(tick, sample_rate)
 end
 
