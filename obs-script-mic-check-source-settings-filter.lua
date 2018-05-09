@@ -60,6 +60,7 @@ function script_load(settings)
 	local sh = obs.obs_get_signal_handler()
 	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
+	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
 end
 
 local next_filter_id = 0
@@ -103,6 +104,15 @@ filter_def.create = function(settings, source)
 		source_rules[filter.id] = {}
 	end
 	bootstrap_rule_settings(source_rules[filter.id], settings)
+
+	local sh = obs.obs_get_signal_handler()
+	local calldata = obs.calldata()
+	obs.calldata_init(calldata)
+	obs.calldata_set_int(calldata, "id", filter.id)
+	script_log(serialize_rule(source_rules[filter.id]))
+	obs.calldata_set_string(calldata, "rule_json", serialize_rule(source_rules[filter.id]))
+	obs.signal_handler_signal(sh, "lua_mic_check_source_rule", calldata)
+	obs.calldata_free(calldata)
 
 	obs.timer_add(filter.bootstrap, 100)
 	obs.timer_add(filter.update, 10000)

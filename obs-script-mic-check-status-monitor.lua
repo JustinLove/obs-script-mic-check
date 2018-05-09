@@ -36,10 +36,19 @@ function source_mute(calldata)
 end
 
 local update_default_rule = function(calldata)
-	script_log('receive update')
+	script_log('receive default')
 	local json = obs.calldata_string(calldata, 'rule_json')
 	default_rule = deserialize_rule(json)
 	dump_rule(default_rule)
+end
+
+local update_source_rule = function(calldata)
+	script_log('receive source')
+	local id = obs.calldata_int(calldata, 'id')
+	local json = obs.calldata_string(calldata, 'rule_json')
+	local rule = deserialize_rule(json)
+	source_rules[id] = rule
+	dump_rule(rule)
 end
 
 -- A function named script_description returns the description shown to
@@ -67,6 +76,8 @@ function script_load(settings)
 	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
 	obs.signal_handler_add(sh, "void lua_mic_check_default_rule(string rule_json)")
 	obs.signal_handler_connect(sh, "lua_mic_check_default_rule", update_default_rule)
+	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
+	obs.signal_handler_connect(sh, "lua_mic_check_source_rule", update_source_rule)
 end
 
 local create_label = function(name, size, color)
@@ -152,7 +163,8 @@ source_def.destroy = function(data)
 	obs.obs_enter_graphics();
 
 	for key,label in pairs(data.labels) do
-		obs.obs_source_release(label)
+		-- frequently deadlocks OBS when reloading (unloading in general?)
+		--obs.obs_source_release(label)
 		data.labels[key] = nil
 	end
 
