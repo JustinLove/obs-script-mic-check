@@ -1,3 +1,7 @@
+- startup rules to status
+- startup source rules to monitor
+- serialize source rule names
+
 - check actual volume levels to try and detect speaking into mute
 - font/icon portabililty check
   - could depend on text-pango in a pinch
