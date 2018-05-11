@@ -71,6 +71,15 @@ function deserialize_rule(json)
 	return rule
 end
 
+function update_source_rule(calldata)
+	script_log('receive source')
+	local id = obs.calldata_int(calldata, 'id')
+	local json = obs.calldata_string(calldata, 'rule_json')
+	local rule = deserialize_rule(json)
+	source_rules[id] = rule
+	dump_rule(rule)
+end
+
 function bootstrap_rule_settings(rule, settings)
 	if rule == nil then
 		script_log("bootstrap_rule_settings no rule")

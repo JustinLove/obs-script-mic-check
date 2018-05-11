@@ -1,4 +1,3 @@
-- startup source rules to monitor
 - source visiblity to status
 - alarm active
 

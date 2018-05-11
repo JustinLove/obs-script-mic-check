@@ -42,15 +42,6 @@ local update_default_rule = function(calldata)
 	dump_rule(default_rule)
 end
 
-local update_source_rule = function(calldata)
-	script_log('receive source')
-	local id = obs.calldata_int(calldata, 'id')
-	local json = obs.calldata_string(calldata, 'rule_json')
-	local rule = deserialize_rule(json)
-	source_rules[id] = rule
-	dump_rule(rule)
-end
-
 local bootstrap = function()
 	local sh = obs.obs_get_signal_handler()
 	obs.signal_handler_signal(sh, "lua_mic_check_request_rules", nil)

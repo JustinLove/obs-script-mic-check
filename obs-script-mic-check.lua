@@ -352,7 +352,10 @@ function script_load(settings)
 	obs.signal_handler_connect(sh, "lua_mic_check_request_audio_sources", request_audio_sources)
 	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
 	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
+	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
+	obs.signal_handler_connect(sh, "lua_mic_check_source_rule", update_source_rule)
 
+	obs.signal_handler_signal(sh, "lua_mic_check_request_rules", nil)
 	obs.timer_add(tick, sample_rate)
 end
 
