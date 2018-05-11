@@ -75,14 +75,17 @@ function script_load(settings)
 	script_log("script filter load")
 
 	local sh = obs.obs_get_signal_handler()
+	-- signals received
 	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
+	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
+	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
+
+	-- signals sent
 	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
 	obs.signal_handler_add(sh, "void lua_mic_check_request_audio_sources()")
 
 	obs.signal_handler_signal(sh, "lua_mic_check_request_audio_sources", nil)
-	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
-	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
 end
 
 local next_filter_id = 0

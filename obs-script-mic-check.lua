@@ -348,19 +348,23 @@ function script_load(settings)
 	enum_sources(hook_source)
 
 	local sh = obs.obs_get_signal_handler()
+	-- signals received
 	obs.signal_handler_connect(sh, "source_create", source_create)
 	obs.signal_handler_connect(sh, "source_destroy", source_destroy)
 	obs.signal_handler_connect(sh, "source_activate", source_activate)
 	obs.signal_handler_connect(sh, "source_deactivate", source_deactivate)
-
-	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
-	obs.signal_handler_add(sh, "void lua_mic_check_default_rule(string rule_json)")
 	obs.signal_handler_add(sh, "void lua_mic_check_request_audio_sources()")
 	obs.signal_handler_connect(sh, "lua_mic_check_request_audio_sources", request_audio_sources)
-	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
-	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
 	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_rule", update_source_rule)
+
+	-- sent and received
+	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
+	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
+
+	-- signals sent
+	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
+	obs.signal_handler_add(sh, "void lua_mic_check_default_rule(string rule_json)")
 	obs.signal_handler_add(sh, "void lua_mic_check_video_source_status(string name, bool active, bool in_current_scene)")
 
 	obs.signal_handler_signal(sh, "lua_mic_check_request_rules", nil)
