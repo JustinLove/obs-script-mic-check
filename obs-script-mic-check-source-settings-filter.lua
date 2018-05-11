@@ -73,6 +73,15 @@ function update_filter_info(filter)
 	if parent ~= nil then
 		local name = obs.obs_source_get_name(parent)
 		source_rules[filter.id].name = name
+
+		local sh = obs.obs_get_signal_handler()
+		local calldata = obs.calldata()
+		obs.calldata_init(calldata)
+		obs.calldata_set_int(calldata, "id", filter.id)
+		script_log(serialize_rule(source_rules[filter.id]))
+		obs.calldata_set_string(calldata, "rule_json", serialize_rule(source_rules[filter.id]))
+		obs.signal_handler_signal(sh, "lua_mic_check_source_rule", calldata)
+		obs.calldata_free(calldata)
 	end
 end
 
@@ -106,15 +115,6 @@ filter_def.create = function(settings, source)
 		source_rules[filter.id] = {}
 	end
 	bootstrap_rule_settings(source_rules[filter.id], settings)
-
-	local sh = obs.obs_get_signal_handler()
-	local calldata = obs.calldata()
-	obs.calldata_init(calldata)
-	obs.calldata_set_int(calldata, "id", filter.id)
-	script_log(serialize_rule(source_rules[filter.id]))
-	obs.calldata_set_string(calldata, "rule_json", serialize_rule(source_rules[filter.id]))
-	obs.signal_handler_signal(sh, "lua_mic_check_source_rule", calldata)
-	obs.calldata_free(calldata)
 
 	obs.timer_add(filter.bootstrap, 100)
 	obs.timer_add(filter.update, 10000)

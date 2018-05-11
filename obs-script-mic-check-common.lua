@@ -29,6 +29,9 @@ function serialize_rule(rule)
 
 	obs.obs_data_set_int(data, 'timeout', rule.timeout)
 	obs.obs_data_set_string(data, 'operator', rule.operator)
+	if rule.name then
+		obs.obs_data_set_string(data, 'name', rule.name)
+	end
 	obs.obs_data_set_obj(data, 'audio_states', states)
 
 	for name,state in pairs(rule.audio_states) do
@@ -49,6 +52,10 @@ function deserialize_rule(json)
 
 	rule.timeout = obs.obs_data_get_int(data, 'timeout')
 	rule.operator = obs.obs_data_get_string(data, 'operator')
+	local name = obs.obs_data_get_string(data, 'name')
+	if name ~= '' then
+		rule.name = name
+	end
 
 	local states = obs.obs_data_get_obj(data, 'audio_states')
 
