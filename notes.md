@@ -1,5 +1,7 @@
-- startup rules to status
+- lazy name updates from settings
 - startup source rules to monitor
+- source visiblity to status
+- alarm active
 
 - check actual volume levels to try and detect speaking into mute
 - font/icon portabililty check

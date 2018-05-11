@@ -51,6 +51,12 @@ local update_source_rule = function(calldata)
 	dump_rule(rule)
 end
 
+local bootstrap = function()
+	local sh = obs.obs_get_signal_handler()
+	obs.signal_handler_signal(sh, "lua_mic_check_request_rules", nil)
+	obs.remove_current_callback()
+end
+
 -- A function named script_description returns the description shown to
 -- the user
 local description = [[Play an alarm if mic state not appropriate for sources shown.
@@ -81,6 +87,9 @@ function script_load(settings)
 	obs.signal_handler_add(sh, "void lua_mic_check_request_audio_sources()")
 
 	obs.signal_handler_signal(sh, "lua_mic_check_request_audio_sources", nil)
+	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
+
+	obs.timer_add(bootstrap, 1000)
 end
 
 local create_label = function(name, size, color)
@@ -146,6 +155,7 @@ source_def.get_name = function()
 end
 
 source_def.create = function(source, settings)
+	script_log("source status create")
 	local data = {
 		labels = {},
 		live_image = obs.gs_image_file(),
@@ -155,6 +165,7 @@ source_def.create = function(source, settings)
 
 	image_source_load(data.live_image, "../../data/obs-studio/themes/Dark/unmute.png")
 	image_source_load(data.mute_image, "../../data/obs-studio/themes/Dark/mute.png")
+
 	return data
 end
 

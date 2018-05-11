@@ -10,6 +10,8 @@ local sample_rate = 1000
 
 local alarm_source = ""
 
+obs_events = {}
+
 dofile(script_path() .. "obs-script-mic-check-common.lua")
 
 function enum_sources(callback)
@@ -88,6 +90,8 @@ function process_events()
 			examine_source_states()
 		elseif event.event == 'request_audio_sources' then
 			examine_source_states()
+		elseif event.event == 'request_rules' then
+			send_default_rule()
 		end
 	end
 	obs_events = {}
@@ -182,6 +186,12 @@ function request_audio_sources()
 	}
 end
 
+function request_rules()
+	obs_events[#obs_events+1] = {
+		event = 'request_rules'
+	}
+end
+
 function frontend_event(event, private_data)
 	script_log("frontend event " .. event)
 	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
@@ -192,6 +202,15 @@ function frontend_event(event, private_data)
 		-- deadlocks OBS on startup
 		--examine_source_states()
 	end
+end
+
+function send_default_rule()
+	local sh = obs.obs_get_signal_handler()
+	local calldata = obs.calldata()
+	obs.calldata_init(calldata)
+	obs.calldata_set_string(calldata, "rule_json", serialize_rule(default_rule))
+	obs.signal_handler_signal(sh, "lua_mic_check_default_rule", calldata)
+	obs.calldata_free(calldata)
 end
 
 function hook_source(source)
@@ -306,12 +325,7 @@ function script_update(settings)
 
 	update_rule_settings(default_rule, settings)
 
-	local sh = obs.obs_get_signal_handler()
-	local calldata = obs.calldata()
-	obs.calldata_init(calldata)
-	obs.calldata_set_string(calldata, "rule_json", serialize_rule(default_rule))
-	obs.signal_handler_signal(sh, "lua_mic_check_default_rule", calldata)
-	obs.calldata_free(calldata)
+	send_default_rule()
 end
 
 -- a function named script_load will be called on startup
@@ -336,6 +350,9 @@ function script_load(settings)
 	obs.signal_handler_add(sh, "void lua_mic_check_default_rule(string rule_json)")
 	obs.signal_handler_add(sh, "void lua_mic_check_request_audio_sources()")
 	obs.signal_handler_connect(sh, "lua_mic_check_request_audio_sources", request_audio_sources)
+	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
+	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
+
 	obs.timer_add(tick, sample_rate)
 end
 

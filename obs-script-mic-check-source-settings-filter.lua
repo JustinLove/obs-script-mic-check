@@ -18,6 +18,24 @@ function source_mute(calldata)
 	}
 end
 
+function request_rules()
+	script_log("got request")
+	for id,rule in pairs(source_rules) do
+		send_source_rule(id, rule)
+	end
+end
+
+function send_source_rule(id, rule)
+	local sh = obs.obs_get_signal_handler()
+	local calldata = obs.calldata()
+	obs.calldata_init(calldata)
+	obs.calldata_set_int(calldata, "id", id)
+	script_log(serialize_rule(rule))
+	obs.calldata_set_string(calldata, "rule_json", serialize_rule(rule))
+	obs.signal_handler_signal(sh, "lua_mic_check_source_rule", calldata)
+	obs.calldata_free(calldata)
+end
+
 -- A function named script_description returns the description shown to
 -- the user
 local description = [[Play an alarm if mic state not appropriate for sources shown.
@@ -63,6 +81,8 @@ function script_load(settings)
 	obs.signal_handler_add(sh, "void lua_mic_check_request_audio_sources()")
 
 	obs.signal_handler_signal(sh, "lua_mic_check_request_audio_sources", nil)
+	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
+	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
 end
 
 local next_filter_id = 0
@@ -74,14 +94,7 @@ function update_filter_info(filter)
 		local name = obs.obs_source_get_name(parent)
 		source_rules[filter.id].name = name
 
-		local sh = obs.obs_get_signal_handler()
-		local calldata = obs.calldata()
-		obs.calldata_init(calldata)
-		obs.calldata_set_int(calldata, "id", filter.id)
-		script_log(serialize_rule(source_rules[filter.id]))
-		obs.calldata_set_string(calldata, "rule_json", serialize_rule(source_rules[filter.id]))
-		obs.signal_handler_signal(sh, "lua_mic_check_source_rule", calldata)
-		obs.calldata_free(calldata)
+		send_source_rule(filter.id, source_rules[filter.id])
 	end
 end
 

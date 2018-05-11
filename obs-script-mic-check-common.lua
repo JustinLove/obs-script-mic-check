@@ -3,7 +3,6 @@ alarm_active = false
 trigger_active = false
 trigger_time = os.time()
 trigger_timeout = 0
-obs_events = {}
 audio_sources = {}
 video_sources = {}
 default_rule = {
