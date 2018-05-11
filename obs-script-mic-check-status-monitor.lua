@@ -54,6 +54,21 @@ local video_source_status = function(calldata)
 	}
 end
 
+local trigger_activate = function(calldata)
+	trigger_active = true
+	trigger_time = obs.calldata_int(calldata, 'time')
+	trigger_timeout = obs.calldata_int(calldata, 'timeout')
+end
+
+local alarm_activate = function()
+	alarm_active = true
+end
+
+local alarm_reset = function()
+	alarm_active = false
+	trigger_active = false
+end
+
 local bootstrap = function()
 	local sh = obs.obs_get_signal_handler()
 	obs.signal_handler_signal(sh, "lua_mic_check_request_rules", nil)
@@ -92,6 +107,12 @@ function script_load(settings)
 	obs.signal_handler_connect(sh, "lua_mic_check_source_rule", update_source_rule)
 	obs.signal_handler_add(sh, "void lua_mic_check_video_source_status(string name, bool active, bool in_current_scene)")
 	obs.signal_handler_connect(sh, "lua_mic_check_video_source_status", video_source_status)
+	obs.signal_handler_add(sh, "void lua_mic_check_trigger_activate(int time, int timeout)")
+	obs.signal_handler_connect(sh, "lua_mic_check_trigger_activate", trigger_activate)
+	obs.signal_handler_add(sh, "void lua_mic_check_alarm_activate()")
+	obs.signal_handler_connect(sh, "lua_mic_check_alarm_activate", alarm_activate)
+	obs.signal_handler_add(sh, "void lua_mic_check_alarm_reset()")
+	obs.signal_handler_connect(sh, "lua_mic_check_alarm_reset", alarm_reset)
 
 	-- signals sent
 	obs.signal_handler_add(sh, "void lua_mic_check_request_audio_sources()")
