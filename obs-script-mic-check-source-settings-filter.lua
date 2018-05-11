@@ -73,6 +73,8 @@ function script_load(settings)
 	-- signals received
 	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
+	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
+	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
 
 	-- signals sent
 	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
