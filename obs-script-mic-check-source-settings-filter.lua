@@ -92,9 +92,11 @@ function update_filter_info(filter)
 	local parent = obs.obs_filter_get_parent(filter.context)
 	if parent ~= nil then
 		local name = obs.obs_source_get_name(parent)
-		source_rules[filter.id].name = name
+		if source_rules[filter.id].name ~= name then
+			source_rules[filter.id].name = name
 
-		send_source_rule(filter.id, source_rules[filter.id])
+			send_source_rule(filter.id, source_rules[filter.id])
+		end
 	end
 end
 
