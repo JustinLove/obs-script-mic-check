@@ -124,8 +124,10 @@ function examine_source_states()
 	local current_source = obs.obs_frontend_get_current_scene()
 	local current_scene = obs.obs_scene_from_source(current_source)
 	local sh = obs.obs_get_signal_handler()
-	local calldata = obs.calldata()
-	obs.calldata_init(calldata)
+	local audiodata = obs.calldata()
+	obs.calldata_init(audiodata)
+	local videodata = obs.calldata()
+	obs.calldata_init(videodata)
 	enum_sources(function(source)
 		local name = obs.obs_source_get_name(source)
 		local status = audio_status(obs.obs_source_muted(source))
@@ -143,17 +145,22 @@ function examine_source_states()
 		}
 		if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
 			audio_sources[name] = info
-			obs.calldata_set_ptr(calldata, "source", source)
-			obs.signal_handler_signal(sh, "lua_mic_check_source_mute", calldata)
+			obs.calldata_set_ptr(audiodata, "source", source)
+			obs.signal_handler_signal(sh, "lua_mic_check_source_mute", audiodata)
 
 		end
 		if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
 			video_sources[name] = info
+			obs.calldata_set_string(videodata, "name", name)
+			obs.calldata_set_bool(videodata, "active", obs.obs_source_active(source))
+			obs.calldata_set_bool(videodata, "in_current_scene", in_current_scene)
+			obs.signal_handler_signal(sh, "lua_mic_check_video_source_status", videodata)
 		end
 	end)
 	obs.obs_source_release(current_source)
 	check_alarm()
-	obs.calldata_free(calldata)
+	obs.calldata_free(audiodata)
+	obs.calldata_free(videodata)
 	--return true
 end
 
@@ -354,6 +361,7 @@ function script_load(settings)
 	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
 	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_rule", update_source_rule)
+	obs.signal_handler_add(sh, "void lua_mic_check_video_source_status(string name, bool active, bool in_current_scene)")
 
 	obs.signal_handler_signal(sh, "lua_mic_check_request_rules", nil)
 	obs.timer_add(tick, sample_rate)

@@ -1,5 +1,5 @@
-- source visiblity to status
 - alarm active
+- fewer source scans, update only what changed
 
 - check actual volume levels to try and detect speaking into mute
 - font/icon portabililty check
@@ -11,3 +11,4 @@
   - scene change on obs load
     - main thread: firing scene change event; obs_scene_find_source attempting to get video_mutex, holding script mutex
     - video thread: obs_lua_source_get_width; attempting to get script mutex, holding source definition_mutex, source filter_mutex, video_mutex, channels_mutex
+  - video thread doing startup activation signals, while main thread is enumerating sources in source_create. conflict with script mutex (via signal) and sources mutex
