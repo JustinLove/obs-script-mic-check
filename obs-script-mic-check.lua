@@ -133,47 +133,48 @@ function test_alarm(props, p, set)
 	return true
 end
 
-function examine_source_states()
+function examine_source_state(source)
 	local current_source = obs.obs_frontend_get_current_scene()
 	local current_scene = obs.obs_scene_from_source(current_source)
 	local sh = obs.obs_get_signal_handler()
-	local audiodata = obs.calldata()
-	obs.calldata_init(audiodata)
-	local videodata = obs.calldata()
-	obs.calldata_init(videodata)
-	enum_sources(function(source)
-		local name = obs.obs_source_get_name(source)
-		local status = audio_status(obs.obs_source_muted(source))
-		local active = video_status(obs.obs_source_active(source))
-		local flags = obs.obs_source_get_output_flags(source)
-		local item = obs.obs_scene_find_source(current_scene, name)
-		local in_current_scene = item ~= nil
-		--script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
-		local info = {
-			name = name,
-			status = status,
-			active = active,
-			flags = flags,
-			in_current_scene = in_current_scene,
-		}
-		if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
-			audio_sources[name] = info
-			obs.calldata_set_ptr(audiodata, "source", source)
-			obs.signal_handler_signal(sh, "lua_mic_check_source_mute", audiodata)
-
-		end
-		if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
-			video_sources[name] = info
-			obs.calldata_set_string(videodata, "name", name)
-			obs.calldata_set_bool(videodata, "active", obs.obs_source_active(source))
-			obs.calldata_set_bool(videodata, "in_current_scene", in_current_scene)
-			obs.signal_handler_signal(sh, "lua_mic_check_video_source_status", videodata)
-		end
-	end)
+	local name = obs.obs_source_get_name(source)
+	local status = audio_status(obs.obs_source_muted(source))
+	local active = video_status(obs.obs_source_active(source))
+	local flags = obs.obs_source_get_output_flags(source)
+	local item = obs.obs_scene_find_source(current_scene, name)
+	local in_current_scene = item ~= nil
+	--script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
+	local info = {
+		name = name,
+		status = status,
+		active = active,
+		flags = flags,
+		in_current_scene = in_current_scene,
+	}
+	if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
+		audio_sources[name] = info
+		local audiodata = obs.calldata()
+		obs.calldata_init(audiodata)
+		obs.calldata_set_ptr(audiodata, "source", source)
+		obs.signal_handler_signal(sh, "lua_mic_check_source_mute", audiodata)
+		obs.calldata_free(audiodata)
+	end
+	if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
+		video_sources[name] = info
+		local videodata = obs.calldata()
+		obs.calldata_init(videodata)
+		obs.calldata_set_string(videodata, "name", name)
+		obs.calldata_set_bool(videodata, "active", obs.obs_source_active(source))
+		obs.calldata_set_bool(videodata, "in_current_scene", in_current_scene)
+		obs.signal_handler_signal(sh, "lua_mic_check_video_source_status", videodata)
+		obs.calldata_free(videodata)
+	end
 	obs.obs_source_release(current_source)
+end
+
+function examine_source_states()
+	enum_sources(examine_source_state)
 	check_alarm()
-	obs.calldata_free(audiodata)
-	obs.calldata_free(videodata)
 	--return true
 end
 
@@ -193,11 +194,12 @@ end
 function source_create(calldata)
 	local source = obs.calldata_source(calldata, "source")
 	hook_source(source)
-	examine_source_states()
+	examine_source_state(source)
 end
 
 function source_destroy(calldata)
-	examine_source_states()
+	local source = obs.calldata_source(calldata, "source")
+	examine_source_state(source)
 end
 
 function request_audio_sources()
@@ -272,10 +274,10 @@ Add a media source for the alarm. A suitable sound file is provided with the scr
 
 Add a copy of the alarm source to every scene where you want to hear it.
 
-Attach rules to video sources ("BRB", "Starting Soon", etc) using the "Mic Check Settings" filter. (Right-click on a source and select filters.) The first active video source with attached settings will be used to trigger alarms instead of the defaults.
+Use obs-script-mic-check-source-settings-filter.lua to add rules to video sources.
+Use obs-script-mic-check-status-monitor.lua to get a visible source to monitor alarm status.
 
-If no such video source is active, then the default rules below will be used.
-]]
+If no filtered video source is active, then the default rules below will be used.]]
 function script_description()
 	return description
 end

@@ -77,16 +77,17 @@ end
 
 -- A function named script_description returns the description shown to
 -- the user
-local description = [[Play an alarm if mic state not appropriate for sources shown.
+local description = [[OBS Source which visually displays mic check alarm status.
 
-Add a media source for the alarm. A suitable sound file is provided with the script. Open Advanced Audio Properties for the source and change Audio Monitoring to Monitor Only (mute output).
+Add to your sources, it may be most usefull hidden and used with window projector so it is not visible on stream.
 
-Add a copy of the alarm source to every scene where you want to hear it.
+Displays the default rule and a section for each source with a attached settings filter. Only one set of rules is active at any given time, the associated rule set will have a colored bar.
 
-Attach rules to video sources ("BRB", "Starting Soon", etc) using the "Mic Check Settings" filter. (Right-click on a source and select filters.) The first active video source with attached settings will be used to trigger alarms instead of the defaults.
+Yellow audio sources indicated they are currently in violation of the rule.
 
-If no such video source is active, then the default rules below will be used.
-]]
+A countup timer will be shown when a rule is triggered and the alarm will be activated soon. The entire source is red when the alarm is active.
+
+Without obs-script-mic-check.lua functionality will be limited to list the sources with attached settings filters.]]
 function script_description()
 	return description
 end

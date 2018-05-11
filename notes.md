@@ -1,4 +1,3 @@
-- fewer source scans, update only what changed
 
 - check actual volume levels to try and detect speaking into mute
 - font/icon portabililty check

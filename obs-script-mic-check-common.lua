@@ -206,4 +206,9 @@ function source_deactivate(calldata)
 	source_active(calldata, false)
 end
 
-
+-- A function named script_description returns the description shown to
+-- the user
+local description = [[Support script for obs-script-mic-check, should not be loaded directly into OBS.]]
+function script_description()
+	return description
+end

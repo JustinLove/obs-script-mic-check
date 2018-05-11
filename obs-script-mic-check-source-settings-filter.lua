@@ -38,16 +38,11 @@ end
 
 -- A function named script_description returns the description shown to
 -- the user
-local description = [[Play an alarm if mic state not appropriate for sources shown.
-
-Add a media source for the alarm. A suitable sound file is provided with the script. Open Advanced Audio Properties for the source and change Audio Monitoring to Monitor Only (mute output).
-
-Add a copy of the alarm source to every scene where you want to hear it.
+local description = [[Provides per-source mic check settings via filter properties.
 
 Attach rules to video sources ("BRB", "Starting Soon", etc) using the "Mic Check Settings" filter. (Right-click on a source and select filters.) The first active video source with attached settings will be used to trigger alarms instead of the defaults.
 
-If no such video source is active, then the default rules below will be used.
-]]
+Non-functional without obs-script-mic-check.lua.]]
 function script_description()
 	return description
 end
@@ -78,8 +73,6 @@ function script_load(settings)
 	-- signals received
 	obs.signal_handler_add(sh, "void lua_mic_check_source_mute(ptr source)")
 	obs.signal_handler_connect(sh, "lua_mic_check_source_mute", source_mute)
-	obs.signal_handler_add(sh, "void lua_mic_check_request_rules()")
-	obs.signal_handler_connect(sh, "lua_mic_check_request_rules", request_rules)
 
 	-- signals sent
 	obs.signal_handler_add(sh, "void lua_mic_check_source_rule(int id, string rule_json)")
