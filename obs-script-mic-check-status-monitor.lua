@@ -162,16 +162,27 @@ local draw_label = function(data, key, name, size, color)
 	obs.obs_source_video_render(data.labels[key])
 end
 
+local data_paths = {
+	"../../data/",
+	"../data/",
+}
+
 function image_source_load(image, file)
-	obs.obs_enter_graphics();
-	obs.gs_image_file_free(image);
-	obs.obs_leave_graphics();
+	for _,data in ipairs(data_paths) do
+		obs.obs_enter_graphics();
+		obs.gs_image_file_free(image);
+		obs.obs_leave_graphics();
 
-	obs.gs_image_file_init(image, file);
+		obs.gs_image_file_init(image, data .. file);
 
-	obs.obs_enter_graphics();
-	obs.gs_image_file_init_texture(image);
-	obs.obs_leave_graphics();
+		obs.obs_enter_graphics();
+		obs.gs_image_file_init_texture(image);
+		obs.obs_leave_graphics();
+
+		if image.loaded then
+			break
+		end
+	end
 
 	if not image.loaded then
 		print("failed to load texture " .. file);
@@ -195,8 +206,8 @@ source_def.create = function(source, settings)
 		height = status_height,
 	}
 
-	image_source_load(data.live_image, "../../data/obs-studio/themes/Dark/unmute.png")
-	image_source_load(data.mute_image, "../../data/obs-studio/themes/Dark/mute.png")
+	image_source_load(data.live_image, "obs-studio/themes/Dark/unmute.png")
+	image_source_load(data.mute_image, "obs-studio/themes/Dark/mute.png")
 
 	return data
 end
