@@ -3,7 +3,7 @@ local obs = obslua
 function script_log(message) -- luacheck: no unused args
 	-- unreachable code
 	-- luacheck: push ignore
-	if true then
+	if false then
 		obs.script_log(obs.LOG_INFO, message)
 	end
 	-- luacheck: pop
