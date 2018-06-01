@@ -17,7 +17,7 @@ local alarm_source = ""
 
 local obs_events = {}
 
-dofile(script_path() .. "obs-script-mic-check-common.lua")
+dofile(script_path() .. "lib/obs-script-mic-check-common.lua")
 
 local function enum_sources(callback)
 	local sources = obs.obs_enum_sources()

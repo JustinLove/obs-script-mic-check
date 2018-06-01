@@ -10,7 +10,7 @@ function script_log(message) -- luacheck: no unused args
 end
 
 
-dofile(script_path() .. "obs-script-mic-check-common.lua")
+dofile(script_path() .. "lib/obs-script-mic-check-common.lua")
 
 local function source_mute(calldata)
 	local source = obs.calldata_source(calldata, "source")

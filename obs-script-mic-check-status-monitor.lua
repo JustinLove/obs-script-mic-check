@@ -21,7 +21,7 @@ local text_white = 0xffffffff
 local text_yellow = 0xff44ffff
 local text_gray = 0xffaaaaaa
 
-dofile(script_path() .. "obs-script-mic-check-common.lua")
+dofile(script_path() .. "lib/obs-script-mic-check-common.lua")
 
 local function source_mute(calldata)
 	--script_log("receive mute")
