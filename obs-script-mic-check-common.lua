@@ -153,7 +153,7 @@ function run_rule(rule)
 	for name,status in pairs(rule.audio_states) do
 		local cache = audio_sources[name]
 		if cache then
-			if cache.status == status then
+			if cache.active == "active" and cache.status == status then
 				if rule.operator == "any" then
 					return true, rule.timeout
 				end

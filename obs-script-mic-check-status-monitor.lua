@@ -299,7 +299,9 @@ local function status_item(data, title, rule, controlling)
 
 		obs.gs_matrix_push()
 		obs.gs_matrix_translate3f(50, 0, 0)
-		if audio_sources[name] ~= nil and audio_sources[name].status == status then
+		if audio_sources[name] ~= nil
+			and audio_sources[name].active == "active"
+			and audio_sources[name].status == status then
 			draw_label(data, name..'-yellow', name, status_font_size, text_yellow)
 		else
 			draw_label(data, name..'-white', name, status_font_size, text_white)
