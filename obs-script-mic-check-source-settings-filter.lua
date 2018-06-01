@@ -1,31 +1,28 @@
-obs = obslua
-bit = require("bit")
-os = require("os")
+local obs = obslua
 
-function script_log(message)
-	obs.script_log(obs.LOG_INFO, message)
+function script_log(message) -- luacheck: no unused args
+	-- unreachable code
+	-- luacheck: push ignore
+	if true then
+		obs.script_log(obs.LOG_INFO, message)
+	end
+	-- luacheck: pop
 end
+
 
 dofile(script_path() .. "obs-script-mic-check-common.lua")
 
-function source_mute(calldata)
+local function source_mute(calldata)
 	local source = obs.calldata_source(calldata, "source")
-	local status = audio_status(obs.obs_source_muted(source))
 	local name = obs.obs_source_get_name(source)
+	--local status = audio_status(obs.obs_source_muted(source))
 	--script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	audio_sources[name] = {
 		name = name,
 	}
 end
 
-function request_rules()
-	script_log("got request")
-	for id,rule in pairs(source_rules) do
-		send_source_rule(id, rule)
-	end
-end
-
-function send_source_rule(id, rule)
+local function send_source_rule(id, rule)
 	local sh = obs.obs_get_signal_handler()
 	local calldata = obs.calldata()
 	obs.calldata_init(calldata)
@@ -36,37 +33,52 @@ function send_source_rule(id, rule)
 	obs.calldata_free(calldata)
 end
 
+local function request_rules()
+	script_log("got request")
+	for id,rule in pairs(source_rules) do
+		send_source_rule(id, rule)
+	end
+end
+
 -- A function named script_description returns the description shown to
 -- the user
+-- luacheck: push no max line length
 local description = [[Provides per-source mic check settings via filter properties.
 
 Attach rules to video sources ("BRB", "Starting Soon", etc) using the "Mic Check Settings" filter. (Right-click on a source and select filters.) The first active video source with attached settings will be used to trigger alarms instead of the defaults.
 
 Non-functional without obs-script-mic-check.lua.]]
+-- luacheck: pop
 function script_description()
 	return description
 end
 
-function add_audio_rule_properties(props)
-	local to = obs.obs_properties_add_int(props, "timeout", "For this many seconds", 0, 60 * 60, 5) 
-	obs.obs_property_set_long_description(to, "Alarm if audio is in alarm state for this many seconds.")
+local function add_audio_rule_properties(props)
+	local to = obs.obs_properties_add_int(props,
+		"timeout", "For this many seconds", 0, 60 * 60, 5)
+	obs.obs_property_set_long_description(to,
+		"Alarm if audio is in alarm state for this many seconds.")
 
-	local op = obs.obs_properties_add_list(props, "operator", "Operator", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	local op = obs.obs_properties_add_list(props,
+		"operator", "Operator", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	obs.obs_property_list_add_string(op, "Any", "any")
 	obs.obs_property_list_add_string(op, "All", "all")
-	obs.obs_property_set_long_description(op, "If multiple audio sources are selected below, how should they be combined.")
+	obs.obs_property_set_long_description(op,
+		"If multiple audio sources are selected below, how should they be combined.")
 
 	for _,source in pairs(audio_sources) do
-		local s = obs.obs_properties_add_list(props, source.name, source.name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+		local s = obs.obs_properties_add_list(props,
+			source.name, source.name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 		obs.obs_property_list_add_string(s, "N/A", "disabled")
 		obs.obs_property_list_add_string(s, "Mute", audio_status(true))
 		obs.obs_property_list_add_string(s, "Live", audio_status(false))
-		obs.obs_property_set_long_description(s, "Alarm will trigger if this audio source is in the specified state.")
+		obs.obs_property_set_long_description(s,
+			"Alarm will trigger if this audio source is in the specified state.")
 	end
 end
 
 -- a function named script_load will be called on startup
-function script_load(settings)
+function script_load(settings) -- luacheck: no unused args
 	script_log("script filter load")
 
 	local sh = obs.obs_get_signal_handler()
@@ -85,7 +97,7 @@ end
 
 local next_filter_id = 0
 
-function update_filter_info(filter)
+local function update_filter_info(filter)
 	--script_log("update filter info")
 	local parent = obs.obs_filter_get_parent(filter.context)
 	if parent ~= nil then
@@ -98,7 +110,7 @@ function update_filter_info(filter)
 	end
 end
 
-filter_def = {}
+local filter_def = {}
 filter_def.id = "lua_mic_check_properties_filter"
 filter_def.type = obs.OBS_SOURCE_TYPE_FILTER
 filter_def.output_flags = obs.OBS_SOURCE_VIDEO
@@ -145,7 +157,7 @@ filter_def.get_defaults = function(settings)
 	audio_default_settings(settings)
 end
 
-filter_def.get_properties = function(filter)
+filter_def.get_properties = function(filter) -- luacheck: no unused args
 	script_log("filter properties")
 	local props = obs.obs_properties_create()
 
@@ -173,7 +185,7 @@ filter_def.get_height = function(filter)
 	return filter.height
 end
 
-filter_def.video_render = function(filter, effect)
+filter_def.video_render = function(filter, effect) -- luacheck: no unused args
 	local target = obs.obs_filter_get_target(filter.context)
 	if target ~= nil then
 		filter.width = obs.obs_source_get_base_width(target)

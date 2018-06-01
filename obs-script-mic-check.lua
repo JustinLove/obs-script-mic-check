@@ -1,20 +1,25 @@
-obs = obslua
-bit = require("bit")
-os = require("os")
+local obs = obslua
+local bit = require("bit")
+local os = require("os")
 
-function script_log(message)
-	obs.script_log(obs.LOG_INFO, message)
+function script_log(message) -- luacheck: no unused args
+	-- unreachable code
+	-- luacheck: push ignore
+	if true then
+		obs.script_log(obs.LOG_INFO, message)
+	end
+	-- luacheck: pop
 end
 
 local sample_rate = 1000
 
 local alarm_source = ""
 
-obs_events = {}
+local obs_events = {}
 
 dofile(script_path() .. "obs-script-mic-check-common.lua")
 
-function enum_sources(callback)
+local function enum_sources(callback)
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		for _,source in ipairs(sources) do
@@ -24,7 +29,7 @@ function enum_sources(callback)
 	obs.source_list_release(sources)
 end
 
-function set_alarm_visible(visible)
+local function set_alarm_visible(visible)
 	if alarm_source ~= nil then
 		local current_source = obs.obs_frontend_get_current_scene()
 		local current_scene = obs.obs_scene_from_source(current_source)
@@ -36,18 +41,34 @@ function set_alarm_visible(visible)
 	end
 end
 
-function activate_alarm()
+local function activate_alarm()
 	set_alarm_visible(true)
 	obs.remove_current_callback()
 end
 
-function play_alarm()
+local function play_alarm()
 	script_log("alarm")
 	set_alarm_visible(false)
 	obs.timer_add(activate_alarm, 500)
 end
 
-function trigger_alarm(violation, timeout)
+local function set_alarm(alarming)
+	if alarming then
+		if not alarm_active then
+			play_alarm()
+			alarm_active = true
+			obs.timer_add(play_alarm, 60*1000)
+		end
+	else
+		if alarm_active then
+			alarm_active = false
+			set_alarm_visible(false)
+			obs.timer_remove(play_alarm)
+		end
+	end
+end
+
+local function trigger_alarm(violation, timeout)
 	if violation then
 		if trigger_active then
 			trigger_timeout = timeout
@@ -80,37 +101,7 @@ function trigger_alarm(violation, timeout)
 	end
 end
 
-function set_alarm(alarming)
-	if alarming then
-		if not alarm_active then
-			play_alarm()
-			alarm_active = true
-			obs.timer_add(play_alarm, 60*1000)
-		end
-	else
-		if alarm_active then
-			alarm_active = false
-			set_alarm_visible(false)
-			obs.timer_remove(play_alarm)
-		end
-	end
-end
-
-function process_events()
-	for _,event in ipairs(obs_events) do
-		script_log("event " .. event.event)
-		if event.event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
-			examine_source_states()
-		elseif event.event == 'request_audio_sources' then
-			examine_source_states()
-		elseif event.event == 'request_rules' then
-			send_default_rule()
-		end
-	end
-	obs_events = {}
-end
-
-function check_alarm()
+local function check_alarm()
 	for _,rule in pairs(source_rules) do
 		if rule.name then
 			local source = video_sources[rule.name]
@@ -123,17 +114,7 @@ function check_alarm()
 	trigger_alarm(run_rule(default_rule), default_rule.timeout)
 end
 
-function tick()
-	process_events()
-	check_alarm()
-end
-
-function test_alarm(props, p, set)
-	play_alarm()
-	return true
-end
-
-function examine_source_state(source)
+local function examine_source_state(source)
 	local current_source = obs.obs_frontend_get_current_scene()
 	local current_scene = obs.obs_scene_from_source(current_source)
 	local sh = obs.obs_get_signal_handler()
@@ -172,13 +153,46 @@ function examine_source_state(source)
 	obs.obs_source_release(current_source)
 end
 
-function examine_source_states()
+local function examine_source_states()
 	enum_sources(examine_source_state)
 	check_alarm()
 	--return true
 end
 
-function source_mute(calldata)
+local function send_default_rule()
+	local sh = obs.obs_get_signal_handler()
+	local calldata = obs.calldata()
+	obs.calldata_init(calldata)
+	obs.calldata_set_string(calldata, "rule_json", serialize_rule(default_rule))
+	obs.signal_handler_signal(sh, "lua_mic_check_default_rule", calldata)
+	obs.calldata_free(calldata)
+end
+
+local function process_events()
+	for _,event in ipairs(obs_events) do
+		script_log("event " .. event.event)
+		if event.event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
+			examine_source_states()
+		elseif event.event == 'request_audio_sources' then
+			examine_source_states()
+		elseif event.event == 'request_rules' then
+			send_default_rule()
+		end
+	end
+	obs_events = {}
+end
+
+local function tick()
+	process_events()
+	check_alarm()
+end
+
+local function test_alarm(props, p, set) -- luacheck: no unused args
+	play_alarm()
+	return true
+end
+
+local function source_mute(calldata)
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
 	--script_log(obs.obs_source_get_name(source) .. " " .. status .. " " .. obs.obs_source_get_id(source))
@@ -191,51 +205,7 @@ function source_mute(calldata)
 	end
 end
 
-function source_create(calldata)
-	local source = obs.calldata_source(calldata, "source")
-	hook_source(source)
-	examine_source_state(source)
-end
-
-function source_destroy(calldata)
-	local source = obs.calldata_source(calldata, "source")
-	examine_source_state(source)
-end
-
-function request_audio_sources()
-	obs_events[#obs_events+1] = {
-		event = 'request_audio_sources'
-	}
-end
-
-function request_rules()
-	obs_events[#obs_events+1] = {
-		event = 'request_rules'
-	}
-end
-
-function frontend_event(event, private_data)
-	script_log("frontend event " .. event)
-	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
-		obs_events[#obs_events+1] = {
-			event = event
-		}
-
-		-- deadlocks OBS on startup
-		--examine_source_states()
-	end
-end
-
-function send_default_rule()
-	local sh = obs.obs_get_signal_handler()
-	local calldata = obs.calldata()
-	obs.calldata_init(calldata)
-	obs.calldata_set_string(calldata, "rule_json", serialize_rule(default_rule))
-	obs.signal_handler_signal(sh, "lua_mic_check_default_rule", calldata)
-	obs.calldata_free(calldata)
-end
-
-function hook_source(source)
+local function hook_source(source)
 	if source ~= nil then
 		local handler = obs.obs_source_get_signal_handler(source)
 		if handler ~= nil then
@@ -247,27 +217,44 @@ function hook_source(source)
 	end
 end
 
-function dump_obs()
-	local keys = {}
-	for key,value in pairs(obs) do
-		keys[#keys+1] = key
+local function source_create(calldata)
+	local source = obs.calldata_source(calldata, "source")
+	hook_source(source)
+	examine_source_state(source)
+end
+
+local function source_destroy(calldata)
+	local source = obs.calldata_source(calldata, "source")
+	examine_source_state(source)
+end
+
+local function request_audio_sources()
+	obs_events[#obs_events+1] = {
+		event = 'request_audio_sources'
+	}
+end
+
+local function request_rules()
+	obs_events[#obs_events+1] = {
+		event = 'request_rules'
+	}
+end
+
+local function frontend_event(event, private_data) -- luacheck: no unused args
+	script_log("frontend event " .. event)
+	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
+		obs_events[#obs_events+1] = {
+			event = event
+		}
+
+		-- deadlocks OBS on startup
+		--examine_source_states()
 	end
-	table.sort(keys)
-	local output = {}
-	for i,key in ipairs(keys) do
-		local value = type(obs[key])
-		if value == 'number' then
-			value = obs[key]
-		elseif value == 'string' then
-			value = '"' .. obs[key] .. '"'
-		end
-		output[i] = key .. " : " .. value
-	end
-	script_log(table.concat(output, "\n"))
 end
 
 -- A function named script_description returns the description shown to
 -- the user
+-- luacheck: push no max line length
 local description = [[Play an alarm if mic state not appropriate for sources shown.
 
 Add a media source for the alarm. A suitable sound file is provided with the script. Open Advanced Audio Properties for the source and change Audio Monitoring to Monitor Only (mute output).
@@ -278,25 +265,32 @@ Use obs-script-mic-check-source-settings-filter.lua to add rules to video source
 Use obs-script-mic-check-status-monitor.lua to get a visible source to monitor alarm status.
 
 If no filtered video source is active, then the default rules below will be used.]]
+-- luacheck: pop
 function script_description()
 	return description
 end
 
-function add_audio_rule_properties(props)
-	local to = obs.obs_properties_add_int(props, "timeout", "For this many seconds", 0, 60 * 60, 5) 
-	obs.obs_property_set_long_description(to, "Alarm if audio is in alarm state for this many seconds.")
+local function add_audio_rule_properties(props)
+	local to = obs.obs_properties_add_int(props,
+		"timeout", "For this many seconds", 0, 60 * 60, 5)
+	obs.obs_property_set_long_description(to,
+		"Alarm if audio is in alarm state for this many seconds.")
 
-	local op = obs.obs_properties_add_list(props, "operator", "Operator", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	local op = obs.obs_properties_add_list(props,
+		"operator", "Operator", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	obs.obs_property_list_add_string(op, "Any", "any")
 	obs.obs_property_list_add_string(op, "All", "all")
-	obs.obs_property_set_long_description(op, "If multiple audio sources are selected below, how should they be combined.")
+	obs.obs_property_set_long_description(op,
+		"If multiple audio sources are selected below, how should they be combined.")
 
 	for _,source in pairs(audio_sources) do
-		local s = obs.obs_properties_add_list(props, source.name, source.name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+		local s = obs.obs_properties_add_list(props,
+			source.name, source.name, obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 		obs.obs_property_list_add_string(s, "N/A", "disabled")
 		obs.obs_property_list_add_string(s, "Mute", audio_status(true))
 		obs.obs_property_list_add_string(s, "Live", audio_status(false))
-		obs.obs_property_set_long_description(s, "Alarm will trigger if this audio source is in the specified state.")
+		obs.obs_property_set_long_description(s,
+			"Alarm will trigger if this audio source is in the specified state.")
 	end
 end
 
@@ -307,7 +301,9 @@ function script_properties()
 
 	local props = obs.obs_properties_create()
 
-	local p = obs.obs_properties_add_list(props, "alarm_source", "Alarm Media Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	local p = obs.obs_properties_add_list(props,
+		"alarm_source", "Alarm Media Source",
+		obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	enum_sources(function(source)
 		local source_id = obs.obs_source_get_id(source)
 		if source_id == "ffmpeg_source" then
@@ -315,12 +311,16 @@ function script_properties()
 			obs.obs_property_list_add_string(p, name, name)
 		end
 	end)
-	obs.obs_property_set_long_description(p, "See above for how to create an appropriate media source.")
+	obs.obs_property_set_long_description(p,
+		"See above for how to create an appropriate media source.")
 
-	local ref = obs.obs_properties_add_button(props, "test_alarm", "Test Alarm", test_alarm)
-	obs.obs_property_set_long_description(ref, "Test activating selected media sources")
+	local ref = obs.obs_properties_add_button(props,
+		"test_alarm", "Test Alarm", test_alarm)
+	obs.obs_property_set_long_description(ref,
+		"Test activating selected media sources")
 
-	local label = obs.obs_properties_add_text(props, "label_default", "Default Checks:", 0)
+	local label = obs.obs_properties_add_text(props,
+		"label_default", "Default Checks:", 0)
 	obs.obs_property_set_enabled(label, false)
 
 	add_audio_rule_properties(props)
@@ -353,7 +353,6 @@ end
 -- a function named script_load will be called on startup
 function script_load(settings)
 	script_log("script load")
-	--dump_obs()
 
 	obs.obs_frontend_add_event_callback(frontend_event)
 

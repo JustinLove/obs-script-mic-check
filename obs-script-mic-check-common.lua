@@ -1,3 +1,4 @@
+local obs = obslua
 
 alarm_active = false
 trigger_active = false
@@ -58,10 +59,10 @@ function deserialize_rule(json)
 
 	local states = obs.obs_data_get_obj(data, 'audio_states')
 
-	for name,audio in pairs(audio_sources) do
-		local state = obs.obs_data_get_string(states, name)
+	for sourcename,_ in pairs(audio_sources) do
+		local state = obs.obs_data_get_string(states, sourcename)
 		if state ~= '' then
-			rule.audio_states[name] = state
+			rule.audio_states[sourcename] = state
 		end
 	end
 
@@ -187,9 +188,9 @@ function video_status(active)
 	end
 end
 
-function source_active(calldata, source_active)
+local function source_active(calldata, active_flag)
 	local source = obs.calldata_source(calldata, "source")
-	local active = video_status(source_active)
+	local active = video_status(active_flag)
 	local name = obs.obs_source_get_name(source)
 	--script_log(name .. " " .. active .. " " .. obs.obs_source_get_id(source))
 	local cache = video_sources[name]

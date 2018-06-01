@@ -1,9 +1,14 @@
-obs = obslua
-bit = require("bit")
-os = require("os")
+local obs = obslua
+local bit = require("bit")
+local os = require("os")
 
-function script_log(message)
-	obs.script_log(obs.LOG_INFO, message)
+function script_log(message) -- luacheck: no unused args
+	-- unreachable code
+	-- luacheck: push ignore
+	if true then
+		obs.script_log(obs.LOG_INFO, message)
+	end
+	-- luacheck: pop
 end
 
 local status_margin = 10
@@ -18,7 +23,7 @@ local text_gray = 0xffaaaaaa
 
 dofile(script_path() .. "obs-script-mic-check-common.lua")
 
-function source_mute(calldata)
+local function source_mute(calldata)
 	--script_log("receive mute")
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
@@ -77,6 +82,7 @@ end
 
 -- A function named script_description returns the description shown to
 -- the user
+-- luacheck: push no max line length
 local description = [[OBS Source which visually displays mic check alarm status.
 
 Add to your sources, it may be most usefull hidden and used with window projector so it is not visible on stream.
@@ -88,12 +94,13 @@ Yellow audio sources indicated they are currently in violation of the rule.
 A countup timer will be shown when a rule is triggered and the alarm will be activated soon. The entire source is red when the alarm is active.
 
 Without obs-script-mic-check.lua functionality will be limited to list the sources with attached settings filters.]]
+-- luacheck: pop
 function script_description()
 	return description
 end
 
 -- a function named script_load will be called on startup
-function script_load(settings)
+function script_load(settings) -- luacheck: no unused args
 	script_log("script status load")
 
 	local sh = obs.obs_get_signal_handler()
@@ -167,7 +174,7 @@ local data_paths = {
 	"../data/",
 }
 
-function image_source_load(image, file)
+local function image_source_load(image, file)
 	for _,data in ipairs(data_paths) do
 		obs.obs_enter_graphics();
 		obs.gs_image_file_free(image);
@@ -189,7 +196,7 @@ function image_source_load(image, file)
 	end
 end
 
-source_def = {}
+local source_def = {}
 source_def.id = "lua_mic_check_status_source"
 source_def.output_flags = bit.bor(obs.OBS_SOURCE_VIDEO, obs.OBS_SOURCE_CUSTOM_DRAW)
 
@@ -197,7 +204,7 @@ source_def.get_name = function()
 	return "Mic Check Status Monitor"
 end
 
-source_def.create = function(source, settings)
+source_def.create = function(source, settings) -- luacheck: no unused args
 	script_log("source status create")
 	local data = {
 		labels = {},
@@ -219,7 +226,7 @@ source_def.destroy = function(data)
 
 	obs.obs_enter_graphics();
 
-	for key,label in pairs(data.labels) do
+	for key,_ in pairs(data.labels) do
 		-- frequently deadlocks OBS when reloading (unloading in general?)
 		--obs.obs_source_release(label)
 		data.labels[key] = nil
@@ -247,7 +254,7 @@ local function status_item(data, title, rule, controlling)
 		else
 			obs.gs_effect_set_color(color_param, 0xff008800)
 		end
-	elseif in_current_scene then 
+	elseif in_current_scene then
 		obs.gs_effect_set_color(color_param, 0xff666666)
 	else
 		obs.gs_effect_set_color(color_param, 0xff777777)
@@ -292,12 +299,9 @@ local function status_item(data, title, rule, controlling)
 
 		obs.gs_matrix_push()
 		obs.gs_matrix_translate3f(50, 0, 0)
-		local color = "-white"
 		if audio_sources[name] ~= nil and audio_sources[name].status == status then
-			color = "-yellow"
 			draw_label(data, name..'-yellow', name, status_font_size, text_yellow)
 		else
-			color = "-white"
 			draw_label(data, name..'-white', name, status_font_size, text_white)
 		end
 		obs.gs_matrix_pop()
@@ -306,13 +310,13 @@ local function status_item(data, title, rule, controlling)
 		items = items + 1
 	end
 	obs.gs_matrix_pop()
-	local offset = status_font_size * math.max(1, items) 
+	local offset = status_font_size * math.max(1, items)
 	obs.gs_matrix_translate3f(0, offset, 0)
 	height = height + offset
 	return height
 end
 
-source_def.video_render = function(data, effect)
+source_def.video_render = function(data, effect) -- luacheck: no unused args
 	if data == nil then
 		return
 	end
@@ -403,7 +407,7 @@ source_def.video_render = function(data, effect)
 	obs.gs_blend_state_pop()
 end
 
-source_def.get_width = function(data)
+source_def.get_width = function(data) -- luacheck: no unused args
 	return status_width
 end
 
