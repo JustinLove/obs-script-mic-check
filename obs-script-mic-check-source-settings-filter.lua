@@ -175,6 +175,7 @@ filter_def.update = function(filter, settings)
 		source_rules[filter.id] = {}
 	end
 	update_rule_settings(source_rules[filter.id], settings)
+	send_source_rule(filter.id, source_rules[filter.id])
 end
 
 filter_def.get_width = function(filter)
