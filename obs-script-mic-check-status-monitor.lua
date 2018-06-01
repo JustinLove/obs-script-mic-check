@@ -12,7 +12,7 @@ function script_log(message) -- luacheck: no unused args
 end
 
 local status_margin = 10
-local status_width = 500
+local status_width = 640
 local status_height = 500
 local status_font_size = 40
 local status_indent = 100
