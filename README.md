@@ -1,4 +1,4 @@
-# OBS Dropped Mic Check
+# OBS Mic Check
 
 Plays a audio alarm (media source) when [OBS Studio](https://obsproject.com/) Audio mute state does not match with displayed sources (BRB, Starting Soon, etc)
 
