@@ -10,7 +10,7 @@ Plays a audio alarm (media source) when [OBS Studio](https://obsproject.com/) Au
 
 There are three scripts which cooperate:
 
-- obs-script-mic-check.lua: Core monitoring and script dialog settings, The ther scripts expect to interact with this.
+- obs-script-mic-check.lua: Core monitoring and script dialog settings, The other scripts expect to interact with this.
 - obs-script-mic-check-source-settings-filter.lua: Provides a filter used to do per-source rules. Technically optional, though source-aware filters are a core feature.
 - obs-script-mic-check-status-monitor.lua: Provides a custom source that displays which sources have attached rules filters, and the status of the alarm triggers. Intended primarily for window projector. Optional.
 
