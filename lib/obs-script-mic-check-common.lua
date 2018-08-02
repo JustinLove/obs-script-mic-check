@@ -153,7 +153,8 @@ function run_rule(rule)
 	for name,status in pairs(rule.audio_states) do
 		local cache = audio_sources[name]
 		if cache then
-			if cache.active == "active" and cache.status == status then
+			if (cache.active == "active" and cache.status == status)
+					or (cache.active == "hidden" and status == "muted") then
 				if rule.operator == "any" then
 					return true, rule.timeout
 				end
@@ -192,7 +193,7 @@ local function source_active(calldata, active_flag)
 	local source = obs.calldata_source(calldata, "source")
 	local active = video_status(active_flag)
 	local name = obs.obs_source_get_name(source)
-	--script_log(name .. " " .. active .. " " .. obs.obs_source_get_id(source))
+	script_log(name .. " " .. active .. " " .. obs.obs_source_get_id(source))
 	local cache = video_sources[name]
 	if cache then
 		cache.active = active

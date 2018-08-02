@@ -24,17 +24,20 @@ local text_gray = 0xffaaaaaa
 dofile(script_path() .. "lib/obs-script-mic-check-common.lua")
 
 local function source_mute(calldata)
-	--script_log("receive mute")
+	script_log("receive mute")
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
+	local active = video_status(obs.obs_source_active(source))
 	local name = obs.obs_source_get_name(source)
-	--script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	local cache = audio_sources[name]
 	if cache then
+		cache.active = active
 		cache.status = status
 	else
 		audio_sources[name] = {
 			name = name,
+			active = active,
 			status = status,
 		}
 	end
@@ -48,10 +51,10 @@ local update_default_rule = function(calldata)
 end
 
 local video_source_status = function(calldata)
-	script_log('receive video status')
 	local name = obs.calldata_string(calldata, 'name')
 	local active = obs.calldata_bool(calldata, 'active')
 	local in_current_scene = obs.calldata_bool(calldata, 'in_current_scene')
+	script_log('receive video status ' .. name .. ' ' .. video_status(active))
 	video_sources[name] = {
 		name = name,
 		active = video_status(active),
@@ -299,9 +302,12 @@ local function status_item(data, title, rule, controlling)
 
 		obs.gs_matrix_push()
 		obs.gs_matrix_translate3f(50, 0, 0)
-		if audio_sources[name] ~= nil
-			and audio_sources[name].active == "active"
-			and audio_sources[name].status == status then
+		if audio_sources[name] == nil then
+			draw_label(data, name..'-gray', name, status_font_size, text_gray)
+		elseif (audio_sources[name].active == "active"
+			and audio_sources[name].status == status)
+			or (audio_sources[name].active == "hidden"
+			and status == "muted") then
 			draw_label(data, name..'-yellow', name, status_font_size, text_yellow)
 		else
 			draw_label(data, name..'-white', name, status_font_size, text_white)
