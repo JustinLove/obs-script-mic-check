@@ -14,6 +14,9 @@ end
 local sample_rate = 1000
 
 local alarm_source = ""
+local unmute_alarm_on_load = true
+
+local first_update = true
 
 local obs_events = {}
 
@@ -38,6 +41,16 @@ local function set_alarm_visible(visible)
 			obs.obs_sceneitem_set_visible(item, visible)
 		end
 		obs.obs_source_release(current_source)
+	end
+end
+
+local function set_alarm_audible(visible)
+	if alarm_source ~= nil and alarm_source ~= "" then
+		local source = obs.obs_get_source_by_name(alarm_source)
+		if source ~= nil then
+			obs.obs_source_set_muted(source, false)
+		end
+		obs.obs_source_release(source)
 	end
 end
 
@@ -314,6 +327,9 @@ function script_properties()
 	obs.obs_property_set_long_description(p,
 		"See above for how to create an appropriate media source.")
 
+	local unmute = obs.obs_properties_add_bool(props,
+		"unmute_alarm_on_load", "Unmute Alarm on Load")
+
 	local ref = obs.obs_properties_add_button(props,
 		"test_alarm", "Test Alarm", test_alarm)
 	obs.obs_property_set_long_description(ref,
@@ -332,8 +348,8 @@ end
 function script_defaults(settings)
 	script_log("defaults")
 
-	obs.obs_data_set_default_string(settings, "label_default", "Alarm if in this state.")
 	obs.obs_data_set_default_string(settings, "alarm_source", "")
+	obs.obs_data_set_default_bool(settings, "unmute_alarm_on_load", true)
 	obs.obs_data_set_default_string(settings, "label_default", "Alarm if in this state.")
 	audio_default_settings(settings)
 end
@@ -344,6 +360,11 @@ function script_update(settings)
 	script_log("update")
 
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
+	unmute_alarm_on_load = obs.obs_data_get_bool(settings, "unmute_alarm_on_load")
+	if first_update and unmute_alarm_on_load then
+		set_alarm_audible()
+	end
+	first_update = false
 
 	update_rule_settings(default_rule, settings)
 
