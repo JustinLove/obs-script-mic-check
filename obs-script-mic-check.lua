@@ -5,7 +5,7 @@ local os = require("os")
 function script_log(message) -- luacheck: no unused args
 	-- unreachable code
 	-- luacheck: push ignore
-	if false then
+	if true then
 		obs.script_log(obs.LOG_INFO, message)
 	end
 	-- luacheck: pop
@@ -32,6 +32,21 @@ local function enum_sources(callback)
 	obs.source_list_release(sources)
 end
 
+local function set_alarm_audible()
+	script_log("set alarm audible ")
+	obs.remove_current_callback()
+	if alarm_source ~= nil and alarm_source ~= "" then
+		local source = obs.obs_get_source_by_name(alarm_source)
+		if source ~= nil then
+			obs.obs_source_set_muted(source, false)
+		end
+		obs.obs_source_release(source)
+	end
+end
+
+
+
+
 local function set_alarm_visible(visible)
 	if alarm_source ~= nil then
 		local current_source = obs.obs_frontend_get_current_scene()
@@ -41,16 +56,6 @@ local function set_alarm_visible(visible)
 			obs.obs_sceneitem_set_visible(item, visible)
 		end
 		obs.obs_source_release(current_source)
-	end
-end
-
-local function set_alarm_audible(visible)
-	if alarm_source ~= nil and alarm_source ~= "" then
-		local source = obs.obs_get_source_by_name(alarm_source)
-		if source ~= nil then
-			obs.obs_source_set_muted(source, false)
-		end
-		obs.obs_source_release(source)
 	end
 end
 
@@ -137,7 +142,7 @@ local function examine_source_state(source)
 	local flags = obs.obs_source_get_output_flags(source)
 	local item = obs.obs_scene_find_source(current_scene, name)
 	local in_current_scene = item ~= nil
-	--script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
+	script_log(name .. " " .. active .. " " .. status .. " " .. obs.obs_source_get_id(source) .. " " .. bit.tohex(flags))
 	local info = {
 		name = name,
 		status = status,
@@ -208,7 +213,7 @@ end
 local function source_mute(calldata)
 	local source = obs.calldata_source(calldata, "source")
 	local status = audio_status(obs.obs_source_muted(source))
-	--script_log(obs.obs_source_get_name(source) .. " " .. status .. " " .. obs.obs_source_get_id(source))
+	script_log(obs.obs_source_get_name(source) .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	local cache = audio_sources[obs.obs_source_get_name(source)]
 	if cache then
 		cache.status = status
@@ -362,7 +367,7 @@ function script_update(settings)
 	alarm_source = obs.obs_data_get_string(settings, "alarm_source")
 	unmute_alarm_on_load = obs.obs_data_get_bool(settings, "unmute_alarm_on_load")
 	if first_update and unmute_alarm_on_load then
-		set_alarm_audible()
+		obs.timer_add(set_alarm_audible, 500)
 	end
 	first_update = false
 
