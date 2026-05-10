@@ -15,8 +15,6 @@ dofile(script_path() .. "lib/obs-script-mic-check-common.lua")
 local function source_mute(calldata)
 	local source = obs.calldata_source(calldata, "source")
 	local name = obs.obs_source_get_name(source)
-	--local status = audio_status(obs.obs_source_muted(source))
-	--script_log(name .. " " .. status .. " " .. obs.obs_source_get_id(source))
 	audio_sources[name] = {
 		name = name,
 	}

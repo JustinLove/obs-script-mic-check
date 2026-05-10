@@ -1,3 +1,5 @@
+[obs-script-mic-check.lua] Starting hidden live scene 000080c9
+[obs-script-mic-check.lua] Failed to call calldata_signal_callback for calldata_signal_callback: attempt to call a number value
 
 - check actual volume levels to try and detect speaking into mute
 

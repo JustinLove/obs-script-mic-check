@@ -5,7 +5,7 @@ local os = require("os")
 function script_log(message) -- luacheck: no unused args
 	-- unreachable code
 	-- luacheck: push ignore
-	if true then
+	if false then
 		obs.script_log(obs.LOG_INFO, message)
 	end
 	-- luacheck: pop
@@ -132,12 +132,25 @@ local function check_alarm()
 	trigger_alarm(run_rule(default_rule), default_rule.timeout)
 end
 
+local function send_lua_mic_check_source_mute(source, muted)
+	local sh = obs.obs_get_signal_handler()
+	local audiodata = obs.calldata()
+	obs.calldata_init(audiodata)
+	obs.calldata_set_ptr(audiodata, "source", source)
+	obs.calldata_set_bool(audiodata, "muted", muted)
+	obs.signal_handler_signal(sh, "lua_mic_check_source_mute", audiodata)
+	obs.calldata_free(audiodata)
+end
+
 local function examine_source_state(source)
 	local current_source = obs.obs_frontend_get_current_scene()
 	local current_scene = obs.obs_scene_from_source(current_source)
 	local sh = obs.obs_get_signal_handler()
 	local name = obs.obs_source_get_name(source)
-	local status = audio_status(obs.obs_source_muted(source))
+	local obsmuted = obs.obs_source_muted(source)
+	local monitor = obs.obs_source_get_monitoring_type(source)
+	local muted = muted_logic(obsmuted, monitor)
+	local status = audio_status(muted)
 	local active = video_status(obs.obs_source_active(source))
 	local flags = obs.obs_source_get_output_flags(source)
 	local item = obs.obs_scene_find_source(current_scene, name)
@@ -152,11 +165,7 @@ local function examine_source_state(source)
 	}
 	if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
 		audio_sources[name] = info
-		local audiodata = obs.calldata()
-		obs.calldata_init(audiodata)
-		obs.calldata_set_ptr(audiodata, "source", source)
-		obs.signal_handler_signal(sh, "lua_mic_check_source_mute", audiodata)
-		obs.calldata_free(audiodata)
+		send_lua_mic_check_source_mute(source, muted)
 	end
 	if bit.band(flags, obs.OBS_SOURCE_VIDEO) ~= 0 then
 		video_sources[name] = info
@@ -210,17 +219,32 @@ local function test_alarm(props, p, set) -- luacheck: no unused args
 	return true
 end
 
-local function source_mute(calldata)
-	local source = obs.calldata_source(calldata, "source")
-	local status = audio_status(obs.obs_source_muted(source))
+local function source_mute_effects(source, muted)
+	local status = audio_status(muted)
+	local name = obs.obs_source_get_name(source)
 	script_log(obs.obs_source_get_name(source) .. " " .. status .. " " .. obs.obs_source_get_id(source))
-	local cache = audio_sources[obs.obs_source_get_name(source)]
+	local cache = audio_sources[name]
 	if cache then
 		cache.status = status
 		check_alarm()
-		local sh = obs.obs_get_signal_handler()
-		obs.signal_handler_signal(sh, "lua_mic_check_source_mute", calldata)
+		send_lua_mic_check_source_mute(source, muted)
 	end
+end
+
+local function source_mute(calldata)
+	local source = obs.calldata_source(calldata, "source")
+	local obsmuted = obs.calldata_bool(calldata, "muted")
+	local monitor = obs.obs_source_get_monitoring_type(source)
+	local muted = muted_logic(obsmuted, monitor)
+	source_mute_effects(source, muted)
+end
+
+local function source_audio_monitoring(calldata)
+	local source = obs.calldata_source(calldata, "source")
+	local monitor = obs.calldata_int(calldata, "type")
+	local obsmuted = obs.obs_source_muted(source)
+	local muted = muted_logic(obsmuted, monitor)
+	source_mute_effects(source, muted)
 end
 
 local function hook_source(source)
@@ -230,6 +254,7 @@ local function hook_source(source)
 			local flags = obs.obs_source_get_output_flags(source)
 			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
 				obs.signal_handler_connect(handler, "mute", source_mute)
+				obs.signal_handler_connect(handler, "audio_monitoring", source_audio_monitoring)
 			end
 		end
 	end
@@ -332,7 +357,8 @@ function script_properties()
 	obs.obs_property_set_long_description(p,
 		"See above for how to create an appropriate media source.")
 
-	local unmute = obs.obs_properties_add_bool(props,
+	--local unmute =
+	obs.obs_properties_add_bool(props,
 		"unmute_alarm_on_load", "Unmute Alarm on Load")
 
 	local ref = obs.obs_properties_add_button(props,

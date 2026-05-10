@@ -189,6 +189,10 @@ function video_status(active)
 	end
 end
 
+function muted_logic(muted, monitor)
+	return muted or monitor == obs.OBS_MONITORING_TYPE_MONITOR_ONLY
+end
+
 local function source_active(calldata, active_flag)
 	local source = obs.calldata_source(calldata, "source")
 	local active = video_status(active_flag)
