@@ -147,9 +147,7 @@ local function examine_source_state(source)
 	local current_scene = obs.obs_scene_from_source(current_source)
 	local sh = obs.obs_get_signal_handler()
 	local name = obs.obs_source_get_name(source)
-	local obsmuted = obs.obs_source_muted(source)
-	local monitor = obs.obs_source_get_monitoring_type(source)
-	local muted = muted_logic(obsmuted, monitor)
+	local muted = obs.obs_source_muted(source)
 	local status = audio_status(muted)
 	local active = video_status(obs.obs_source_active(source))
 	local flags = obs.obs_source_get_output_flags(source)
@@ -233,17 +231,7 @@ end
 
 local function source_mute(calldata)
 	local source = obs.calldata_source(calldata, "source")
-	local obsmuted = obs.calldata_bool(calldata, "muted")
-	local monitor = obs.obs_source_get_monitoring_type(source)
-	local muted = muted_logic(obsmuted, monitor)
-	source_mute_effects(source, muted)
-end
-
-local function source_audio_monitoring(calldata)
-	local source = obs.calldata_source(calldata, "source")
-	local monitor = obs.calldata_int(calldata, "type")
-	local obsmuted = obs.obs_source_muted(source)
-	local muted = muted_logic(obsmuted, monitor)
+	local muted = obs.calldata_bool(calldata, "muted")
 	source_mute_effects(source, muted)
 end
 
@@ -254,7 +242,6 @@ local function hook_source(source)
 			local flags = obs.obs_source_get_output_flags(source)
 			if bit.band(flags, obs.OBS_SOURCE_AUDIO) ~= 0 then
 				obs.signal_handler_connect(handler, "mute", source_mute)
-				obs.signal_handler_connect(handler, "audio_monitoring", source_audio_monitoring)
 			end
 		end
 	end

@@ -19,7 +19,6 @@ stds.common = {
     "source_rules",
     "audio_status",
     "video_status",
-    "muted_logic",
     "run_rule",
     "dump_rule",
     "serialize_rule",

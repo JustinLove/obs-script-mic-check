@@ -1,5 +1,11 @@
 # OBS Mic Check Changelog
 
+## 1.2.0
+
+- Remove references to monitoring type, which was depreciated in OBS 33.
+- Updated graphics API.
+- Embedded mute/unmute images. OBS themes now use SVG, which can not be loaded by the graphics library.
+
 ## 1.1.0
 
 - Only alarm if the audio source is sending to output; it can be active if monitoring is enabled.

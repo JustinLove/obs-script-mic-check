@@ -174,20 +174,21 @@ local draw_label = function(data, key, name, size, color)
 end
 
 local data_paths = {
-	"../../data/",
-	"../data/",
+	script_path(),
+	"../../data/obs-studio/themes/Dark",
+	"../data/obs-studio/themes/Dark",
 }
 
 local function image_source_load(image, file)
 	for _,data in ipairs(data_paths) do
 		obs.obs_enter_graphics();
-		obs.gs_image_file_free(image);
+		obs.gs_image_file_ex_free(image);
 		obs.obs_leave_graphics();
 
-		obs.gs_image_file_init(image, data .. file);
+		obs.gs_image_file_ex_init(image, data .. file, obs.GS_IMAGE_ALPHA_STRAIGHT);
 
 		obs.obs_enter_graphics();
-		obs.gs_image_file_init_texture(image);
+		obs.gs_image_file_ex_init_texture(image);
 		obs.obs_leave_graphics();
 
 		if image.loaded then
@@ -212,13 +213,13 @@ source_def.create = function(source, settings) -- luacheck: no unused args
 	script_log("source status create")
 	local data = {
 		labels = {},
-		live_image = obs.gs_image_file(),
-		mute_image = obs.gs_image_file(),
+		live_image = obs.gs_image_file_ex(),
+		mute_image = obs.gs_image_file_ex(),
 		height = status_height,
 	}
 
-	image_source_load(data.live_image, "obs-studio/themes/Dark/unmute.png")
-	image_source_load(data.mute_image, "obs-studio/themes/Dark/mute.png")
+	image_source_load(data.live_image, "unmute.png")
+	image_source_load(data.mute_image, "mute.png")
 
 	return data
 end
@@ -236,8 +237,8 @@ source_def.destroy = function(data)
 		data.labels[key] = nil
 	end
 
-	obs.gs_image_file_free(data.live_image)
-	obs.gs_image_file_free(data.mute_image)
+	obs.gs_image_file_ex_free(data.live_image)
+	obs.gs_image_file_ex_free(data.mute_image)
 
 	obs.obs_leave_graphics()
 end

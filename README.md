@@ -16,7 +16,7 @@ There are three scripts which cooperate:
 
 ## Usage
 
-Add a media source for the alarm. A suitable sound file is provided with the script. Open Advanced Audio Properties for the source and change Audio Monitoring to Monitor Only (mute output).
+Add a media source for the alarm. A suitable sound file is provided with the script. You may want to set the alarm to monitor but not output.
 
 Add a copy of the alarm source to every scene where you want to hear it.
 
@@ -27,3 +27,5 @@ If no such video source is active, then the default rules on the script dialog w
 ## Credits
 
 Alert sounds: [`pup_alert.mp3`](https://freesound.org/people/willy_ineedthatapp_com/sounds/167337/) by `willy_ineedthatapp_com`
+
+Mute/unmute images are format converted from the SVG versions used by OBS. OBS is provided under [GPL-2.0](https://github.com/obsproject/obs-studio?tab=GPL-2.0-1-ov-file)
